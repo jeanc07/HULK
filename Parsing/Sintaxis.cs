@@ -272,19 +272,13 @@ public class SyntacticAnalisis
                                 if(balanced == true)
                                 {
                                     temp = currentTokens.GetRange(j+2, closePosition-(Math.Abs((j+2))));
-
-                                    contar2 = 0;
-                                    for (int k = 0; k < temp.Count; k++)       
-                                    {
-                                        if(lex.ConditionOperators().Contains(temp[k]))
-                                        {
-                                            contar2++;
-                                        }                                               
-                                    } 
+                                    List<string> tempcount = new List<string>();
+                                    tempcount.AddRange(temp);
+                                    tempcount.RemoveAll(x => x =="|" || x == "&");
                                     string[] save = new string[temp.Count];
                                     temp.CopyTo(0,save,0,temp.Count);
                                     int count = save.ToList().RemoveAll(x => x == "|" || x == "&");
-                                    if(count >= contar2 && count != 0)
+                                    if(tempcount.Count != count+1 && count != 0)
                                         bad = true;
                                     else
                                     {
