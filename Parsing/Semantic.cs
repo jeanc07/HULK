@@ -17,10 +17,12 @@ public class Semantic
 
             if (lex.Operators().Any(x => x == token && token != "="))
             {
-                if (!double.TryParse(currentTokens.ElementAt(i-1),out _) && !specials.Any(x =>x is Variable && ((Variable)x).Nombre == currentTokens.ElementAt(i-1) && (((Variable)x).Tipo == "int" || ((Variable)x).Tipo == null)))
+                if (!double.TryParse(currentTokens.ElementAt(i-1),out _) && !specials.Any(x =>x is Variable && ((Variable)x).Nombre == currentTokens.ElementAt(i-1) && (((Variable)x).Tipo == "int" || ((Variable)x).Tipo == null))
+                && currentTokens.ElementAt(i-1) != ")" && currentTokens.ElementAt(i-1) != "(")
                 {
                     bad = true;
-                }else if (!double.TryParse(currentTokens.ElementAt(i+1),out _) && !specials.Any(x => ((Variable)x).Nombre == currentTokens.ElementAt(i+1) && (((Variable)x).Tipo == "int" || ((Variable)x).Tipo == null)))
+                }else if (!double.TryParse(currentTokens.ElementAt(i+1),out _) && !specials.Any(x =>x is Variable && ((Variable)x).Nombre == currentTokens.ElementAt(i+1) && (((Variable)x).Tipo == "int" || ((Variable)x).Tipo == null))
+                && currentTokens.ElementAt(i+1) != ")" && currentTokens.ElementAt(i+1) != "(" && !specials.Any(x => x is Function && x.Nombre == currentTokens.ElementAt(i+1)))
                 {
                     bad = true;
                 }
