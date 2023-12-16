@@ -387,12 +387,17 @@ public class PredFunction
         
         for (int i = 0; i < concat.Count; i++)
         {   
-            if(i!=0 || concat.Count == 1)
+            if(i==0 || concat.Count == 1)
             {
-                lines.ElementAt(concat.ElementAt(i)-1).Split(new char[] {'"'});
-                result+=lines.ElementAt(concat.ElementAt(i)-1);
+                string temp = lines.ElementAt(concat.ElementAt(i)-1).Split(new char[] {'"'}).ElementAt(1);
+                result+=temp;
             }
-            result+=" "+lines.ElementAt(concat.ElementAt(i)+1);
+            string temp2 = lines.ElementAt(concat.ElementAt(i)+1).Split(new char[]{'"'}).ElementAt(1);
+            result+=" "+temp2;
+        }
+        if (lines.Count == 1)
+        {
+            result = lines[0].Split(new char[] {'"'}).ElementAt(1);
         }
 
         return result;
@@ -665,7 +670,7 @@ public class PredFunction
                 conditionvalues.Add(temp,tempbool);
                 save.RemoveRange(0,save.Count);
             }
-            else if (orpos < andpos || andpos == -1)
+            else if ((orpos < andpos && orpos != -1) || andpos == -1)
             {
                 List<string> temp = save.GetRange(0,orpos);
                 bool tempbool = Evaluate(temp,lex);
@@ -689,24 +694,39 @@ public class PredFunction
 
         List<int> andposes = checkif(ifconditiondata,"&");
         List<int> orposes = checkif(ifconditiondata,"|");
-        bool isor = false;
-        bool isand = false;
+        List<bool> finalresults = new List<bool>();
         do
         {
             string operatortemp = CheckFirst(andposes,orposes);
             if (operatortemp == "&")
             {
-                isand = true;
-                isor = false;
+                if (conditionvalues.Values.ElementAt(0) && conditionvalues.Values.ElementAt(1))
+                {
+                    finalresults.Add(true);
+                }else
+                {
+                    finalresults.Add(false);
+                }
+                conditionvalues.Remove(conditionvalues.Keys.ElementAt(0));
                 andposes.RemoveAt(0);
             }else
             {
-                isand = false;
-                isor = true;
+                if (conditionvalues.Values.ElementAt(0) || conditionvalues.Values.ElementAt(1))
+                {
+                    finalresults.Add(true);
+                }else
+                {
+                    finalresults.Add(false);
+                }
+                conditionvalues.Remove(conditionvalues.Keys.ElementAt(0));
                 orposes.RemoveAt(0);
             }
 
-        } while (andposes.Count != 0 && orposes.Count != 0);
+        } while (andposes.Count != 0 || orposes.Count != 0);
+        if(finalresults.All(x => x))
+            result = true;
+        else
+            result = false;
         return result;
     }
     /// <summary>
