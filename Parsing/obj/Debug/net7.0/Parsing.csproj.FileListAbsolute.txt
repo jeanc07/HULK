@@ -1,0 +1,11 @@
+C:\My things\Projects CC\HULK\Parsing\bin\Debug\net7.0\Parsing.deps.json
+C:\My things\Projects CC\HULK\Parsing\bin\Debug\net7.0\Parsing.dll
+C:\My things\Projects CC\HULK\Parsing\bin\Debug\net7.0\Parsing.pdb
+C:\My things\Projects CC\HULK\Parsing\obj\Debug\net7.0\Parsing.GeneratedMSBuildEditorConfig.editorconfig
+C:\My things\Projects CC\HULK\Parsing\obj\Debug\net7.0\Parsing.AssemblyInfoInputs.cache
+C:\My things\Projects CC\HULK\Parsing\obj\Debug\net7.0\Parsing.AssemblyInfo.cs
+C:\My things\Projects CC\HULK\Parsing\obj\Debug\net7.0\Parsing.csproj.CoreCompileInputs.cache
+C:\My things\Projects CC\HULK\Parsing\obj\Debug\net7.0\Parsing.dll
+C:\My things\Projects CC\HULK\Parsing\obj\Debug\net7.0\refint\Parsing.dll
+C:\My things\Projects CC\HULK\Parsing\obj\Debug\net7.0\Parsing.pdb
+C:\My things\Projects CC\HULK\Parsing\obj\Debug\net7.0\ref\Parsing.dll
