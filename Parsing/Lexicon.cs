@@ -701,7 +701,11 @@ public class Lexicon
                 }else if(wordToken == "@")
                 {
                     elements.Add(wordToken);
-                }                                                     
+                }else if (wordToken == "true" || wordToken == "false")
+                {
+                    elements.Add(wordToken);
+                    BoolToken temp = new BoolToken("",wordToken);
+                }                                                
                 else
                     return false;
             }
