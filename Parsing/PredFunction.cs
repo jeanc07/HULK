@@ -384,20 +384,50 @@ public class PredFunction
     {
         string result = "";
         List<int> concat = checkif(lines,"@");
-        
+        List<SpecialTokensClass> specials = lex.SpecialTokensClass();
+        for (int i = 0; i < lines.Count; i++)
+        {
+            if (specials.Any(x => x is Variable && ((Variable)x).Nombre == lines[i] && (((Variable)x).Tipo == "string" || ((Variable)x).Tipo == "int")))
+            {
+                string temp = lines[i];
+                SpecialTokensClass specialtemp = specials.Find(x => x is Variable && ((Variable)x).Nombre == lines[i] && (((Variable)x).Tipo == "string" || ((Variable)x).Tipo == "int"));
+                string temp2 = "";
+                if (specialtemp is Variable)
+                {
+                    temp2 = ((Variable)specialtemp).Valor;
+                }
+                lines.Insert(i,temp2);
+                lines.Remove(temp);
+            }
+        }
         for (int i = 0; i < concat.Count; i++)
         {   
             if(i==0 || concat.Count == 1)
             {
-                string temp = lines.ElementAt(concat.ElementAt(i)-1).Split(new char[] {'"'}).ElementAt(1);
+                string temp = lines.ElementAt(concat.ElementAt(i)-1).Split(new char[] {'"'}).ElementAt(0);
+                if (lines.ElementAt(concat.ElementAt(i)-1).Split(new char[] {'"'}).Count() > 1)
+                {
+                    temp = lines.ElementAt(concat.ElementAt(i)-1).Split(new char[] {'"'}).ElementAt(1);
+                }
+
                 result+=temp;
             }
-            string temp2 = lines.ElementAt(concat.ElementAt(i)+1).Split(new char[]{'"'}).ElementAt(1);
+            string temp2 = lines.ElementAt(concat.ElementAt(i)+1).Split(new char[] {'"'}).ElementAt(0);
+            if (lines.ElementAt(concat.ElementAt(i)+1).Split(new char[] {'"'}).Count() > 1)
+            {
+                temp2 = lines.ElementAt(concat.ElementAt(i)+1).Split(new char[] {'"'}).ElementAt(1);
+            }
+
             result+=" "+temp2;
         }
         if (lines.Count == 1)
         {
-            result = lines[0].Split(new char[] {'"'}).ElementAt(1);
+            string temp = lines[0].Split(new char[] {'"'}).ElementAt(0);
+            if (lines[0].Split(new char[]{'"'}).Count() > 1)
+            {
+                temp = lines[0].Split(new char[]{'"'}).ElementAt(1);
+            }
+            result = temp;
         }
 
         return result;
@@ -456,12 +486,10 @@ public class PredFunction
         tokens.Remove(tokens[0]);
         tokens.Remove(tokens[0]);
         if(tokens[tokens.Count-1] == ";")
+            tokens.RemoveAt(tokens.Count-2);
+        else
             tokens.RemoveAt(tokens.Count-1);
-        tokens.RemoveAt(tokens.Count-1);
-        if (tokens.Any(x => x == "@"))
-        {
-            System.Console.WriteLine(Concat(tokens,lex));
-        }else if (next(tokens,lex) == "")
+        if (next(tokens,lex) == "")
         {
             print(tokens,lex);
         }else
@@ -476,62 +504,14 @@ public class PredFunction
     /// <param name="lex"></Resultado del análisis léxico>
     public static void print(List<string> tokens, Lexicon lex)
     {
-        if (tokens.Any(x => x == "@"))
-        {
-            int splitter = tokens.IndexOf("@"); 
-            string result1 = "", result2 = "";
-
-            List<string> part1 = tokens.GetRange(2, splitter-2);  
-
-            if(part1.Count == 1)
-            {
-                if(int.TryParse(part1.ElementAt(0), out _))
-                    result1 = part1.ElementAt(0);
-                else if (part1[0].Contains('"'))
-                {
-                    result1 = part1[0].ToString().Substring(1, part1[0].ToString().Length-2);
-                }                    
-                else   
-                {
-                    for (int i = 0; i < lex.SpecialTokensClass().Count; i++)
-                    {
-                        if (part1[0] == lex.SpecialTokensClass().ElementAt(i).Nombre)
-                        {
-                            if(lex.SpecialTokensClass().ElementAt(i) is TokenValue)
-                                result1 = ((TokenValue)lex.SpecialTokensClass().ElementAt(i)).Valor;
-                        }
-                    }                
-                }
-            }
-
-           List<string> part2 = tokens.GetRange(splitter+1, ((tokens.Count-1)-(splitter+1)));  
-
-            if(part2.Count == 1)
-            {
-                if(int.TryParse(part2.ElementAt(0), out _))
-                    result2 = part2.ElementAt(0);
-                else if (part2[0].Contains('"'))
-                {
-                    result2 = part2[0].ToString().Substring(1, part2[0].ToString().Length-2);
-                }                           
-                else   
-                {
-                    for (int i = 0; i < lex.SpecialTokensClass().Count; i++)
-                    {
-                        if (part2[0] == lex.SpecialTokensClass().ElementAt(i).Nombre)
-                        {
-                            if(lex.SpecialTokensClass().ElementAt(i) is TokenValue)
-                                result2 = ((TokenValue)lex.SpecialTokensClass().ElementAt(i)).Valor;
-                        }
-                    }                
-                }
-            } 
-            System.Console.WriteLine(result1+result2);       
-        }else if (tokens.Count == 1)
+        if (tokens.Count == 1)
         {
             System.Console.WriteLine(tokens[0]);   
         }
-        else
+        else if (tokens.Any(x => x == "@"))
+        {
+            System.Console.WriteLine(Concat(tokens,lex));
+        }else
         {
             List<string> inside = tokens.GetRange(2, tokens.Count-3); 
             if (inside.Count == 1)
@@ -587,17 +567,19 @@ public class PredFunction
             {
                 result = "if";
                 break;
-            }else if (lines.Count == 1)
-            {
-                result = "";
-                break;
-            }else if (special.Any(x => ((Variable)x).Nombre == lines[i] && x is Function))
+            }else if (special.Any(x =>  x is Function && ((Function)x).Nombre == lines[i]))
             {
                 result = "function";
                 break;
-            }else if(double.TryParse(lines[i],out _) || special.Any(x => ((Variable)x).Nombre == lines[i] && ((Variable)x).Tipo == "int"))
+            }else if (lines.Count == 1 || lines.Contains("@"))
+            {
+                result = "";
+                continue;
+            }else if((int.TryParse(lines[i],out _) || special.Any(x => x is Variable && ((Variable)x).Nombre == lines[i] && ((Variable)x).Tipo == "int"))
+            && lines.Count > 1)
             {
                 result= "math";
+                continue;
             }
         }
 
@@ -642,7 +624,12 @@ public class PredFunction
             if(posLet == -1 || posLet > posAssign)
                 valid = false;
         }
-
+        if (part[0] == "(")
+        {
+            part.RemoveAt(0);
+            if (part[part.Count-1] == ")")
+                part.RemoveAt(part.Count-1);
+        }
         return part;
     }
     /// <summary>
@@ -1011,11 +998,11 @@ public class PredFunction
     /// <param name="lex"></Resultado del análisis léxico>
     /// <param name="token"></Parámetro a buscar>
     /// <returns></Retorna la posición de cierre de la instrucción dada>
-    public static int ClosePos(List<string> lines, Lexicon lex, string token)
+    public static int ClosePos(List<string> lines, Lexicon lex, int posIn)
     {
         int result = 0;
         int countOpen = 0, countClose = 0;
-        int posIn = lines.IndexOf(token);
+
         for (int i = posIn + 1; i < lines.Count; i++)
         {
             if(lines.ElementAt(i) == "(")
@@ -1023,9 +1010,13 @@ public class PredFunction
             else if(lines.ElementAt(i) == ")")
                 countClose++;
 
-            if(lines.ElementAt(i) == ";" || countClose > countOpen)
+            if(lines.ElementAt(i) == ";")
             {
-                result = i;
+                result = i-1;
+                break;
+            }else if (countClose > countOpen && countClose != 0 && countOpen != 0)
+            {
+                result = i+1;
                 break;
             }
         }
@@ -1048,11 +1039,12 @@ public class PredFunction
         {
             if (next(lines,lex) == "let")
             {
-                int tem = lines.IndexOf("let");
+                int tem = lines.FindIndex(0,x => x == "let");
                 bool valid = true;
-                lines.InsertRange(tem,let_in(lines,ref valid));
-                tem = lines.IndexOf("let");
-                int tempclosein = ClosePos(lines,lex,"in");
+                List<string> temp = let_in(lines,ref valid);
+                lines.InsertRange(tem,temp);
+                tem = lines.FindIndex(temp.Count,x => x == "let");
+                int tempclosein = ClosePos(lines,lex,lines.FindIndex(temp.Count, x => x == "in"));
                 lines.RemoveRange(tem,tempclosein-tem); //Buscar cierre del in
                 result = Executeline(lines,lex);
             }else if (next(lines,lex) == "if")
@@ -1062,10 +1054,11 @@ public class PredFunction
                 List<string> elsedata = new List<string>();
                 //lines = if_else(lines,ref ifdata, ref elsedata,ref ifconditiondata, lex);
                 //result = Executeline(lines,lex);
-                int tem = lines.IndexOf("if");
-                lines.InsertRange(tem,if_else(lines,ref ifdata,ref elsedata,ref ifconditiondata,lex));
-                tem = lines.IndexOf("if");
-                int tempclosein = ClosePos(lines,lex,"if");
+                int tem = lines.FindIndex(0,x => x == "if");
+                List<string> temp = if_else(lines,ref ifdata,ref elsedata,ref ifconditiondata,lex);
+                lines.InsertRange(tem,temp);
+                tem = lines.FindIndex(temp.Count,x => x == "if");
+                int tempclosein = ClosePos(lines,lex,lines.FindIndex(temp.Count, x => x == "if"));
                 lines.RemoveRange(tem,tempclosein-tem);
                 result = Executeline(lines,lex);
             }else if (next(lines,lex) == "print")
@@ -1078,7 +1071,12 @@ public class PredFunction
                 result = Executeline(lines,lex);
             }else
             {
-                doArithmetic(lines,lex).ToString().ToList();
+                List<string> temp = new List<string>();
+                temp.AddRange(lines);
+                temp.Remove(";");
+                string resulttemp = doArithmetic(temp,lex).ToString();
+                lines.Insert(0,resulttemp);
+                lines.RemoveRange(1,lines.Count-1);
             }
         }
         return result;
