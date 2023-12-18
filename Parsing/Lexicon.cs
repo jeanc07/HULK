@@ -123,6 +123,7 @@ public class Lexicon
         specialTokens = new List<string>();
         specialTokensClass = new List<SpecialTokensClass>();
         isfunction = false;
+        Variable PI = new Variable("PI","int","3");
     }
 
     /// <summary>
