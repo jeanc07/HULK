@@ -97,10 +97,12 @@ public class Semantic
                 }         
             }else if (token == "@")
             {
-                if (double.TryParse(currentTokens.ElementAt(i-1),out _) || specials.Any(x =>x is Variable &&((Variable)x).Nombre == currentTokens.ElementAt(i-1) && ((Variable)x).Tipo == "int"))
+                if (!double.TryParse(currentTokens.ElementAt(i-1),out _) && !specials.Any(x =>x is Variable &&((Variable)x).Nombre == currentTokens.ElementAt(i-1) && (((Variable)x).Tipo == "int") || ((Variable)x).Tipo == "string")
+                && !specials.Any(x => x is StringToken && ((StringToken)x).Valor == currentTokens.ElementAt(i-1)))
                 {
                     bad = true;
-                }else if (double.TryParse(currentTokens.ElementAt(i+1),out _) || specials.Any(x =>x is Variable &&((Variable)x).Nombre == currentTokens.ElementAt(i+1) && ((Variable)x).Tipo == "int"))
+                }else if (!double.TryParse(currentTokens.ElementAt(i+1),out _) && !specials.Any(x =>x is Variable &&((Variable)x).Nombre == currentTokens.ElementAt(i+1) && (((Variable)x).Tipo == "int") ||((Variable)x).Tipo == "string")
+                && !specials.Any(x => x is StringToken && ((StringToken)x).Valor == currentTokens.ElementAt(i+1)))
                 {
                     bad = true;
                 }
