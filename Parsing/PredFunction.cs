@@ -137,25 +137,6 @@ public class PredFunction
                         if(token2 == -1)
                             number2 = double.Parse(tokens.ElementAt(i+1));                              
 
-                        if (tokens.ElementAt(i) == "%")
-                        {
-                            if(token2 != -1)  
-                                result%= token2;
-                            else
-                                result%= number2;
-
-                            tokens.RemoveAt(i-1);
-                            tokens.RemoveAt(i-1);
-                            tokens.RemoveAt(i-1);
-                            if(i < tokens.Count)
-                                tokens.Insert(i-1, result.ToString());
-                            else
-                                tokens.Add(result.ToString());
-                            
-                            i--;
-                            if(tokens.Count == 1)
-                                break;
-                        }
                         if(tokens.ElementAt(i) == "/")
                         {
                             if(token2 != -1)  
@@ -195,29 +176,31 @@ public class PredFunction
                             if(tokens.Count == 1)
                                 break;
                         }
+                        if (tokens.ElementAt(i) == "%")
+                        {
+                            if(token2 != -1)  
+                                result%= token2;
+                            else
+                                result%= number2;
+
+                            tokens.RemoveAt(i-1);
+                            tokens.RemoveAt(i-1);
+                            tokens.RemoveAt(i-1);
+                            if(i < tokens.Count)
+                                tokens.Insert(i-1, result.ToString());
+                            else
+                                tokens.Add(result.ToString());
+                            
+                            i--;
+                            if(tokens.Count == 1)
+                                break;
+                        }
                 }else
                 {
                     number1 = double.Parse(tokens.ElementAt(i-1));                            
                     number2 = double.Parse(tokens.ElementAt(i+1)); 
                     result = number1;
 
-                    if (tokens.ElementAt(i) == "%")
-                    {
-                        result%= number2;
-
-                        tokens.RemoveAt(i-1);
-                        tokens.RemoveAt(i-1);
-                        tokens.RemoveAt(i-1);
-                        if(i < tokens.Count)
-                            tokens.Insert(i-1, result.ToString());
-                        else
-                            tokens.Add(result.ToString());
-                        exist = true;
-                        
-                        i--;
-                        if(tokens.Count == 1)
-                            break;
-                    }
                     if(tokens.ElementAt(i) == "*")
                     { 
                         result*= number2;
@@ -239,6 +222,24 @@ public class PredFunction
                     if(tokens.ElementAt(i) == "/")
                     { 
                         result/= number2;
+
+                        tokens.RemoveAt(i-1);
+                        tokens.RemoveAt(i-1);
+                        tokens.RemoveAt(i-1);
+                        if(i < tokens.Count)
+                            tokens.Insert(i-1, result.ToString());
+                        else
+                            tokens.Add(result.ToString());
+                        exist = true;
+                        
+                        i--;
+                        if(tokens.Count == 1)
+                            break;
+                    }
+
+                    if (tokens.ElementAt(i) == "%")
+                    {
+                        result%= number2;
 
                         tokens.RemoveAt(i-1);
                         tokens.RemoveAt(i-1);
