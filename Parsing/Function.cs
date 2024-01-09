@@ -17,9 +17,15 @@ public class Function : SpecialTokensClass
         set => cuerpo = value;
     }
 
-    public Function(string nombre, List<Variable> parametro, List<string> cuerpo) : base(nombre)
+    public Function(string name, List<Variable> parametro, List<string> cuerpo) : base(name)
     {
         this.parametro = parametro;
         this.cuerpo = cuerpo;
+    }
+
+    public Function() : base(null)
+    {
+        this.parametro = new List<Variable>();
+        this.cuerpo = new List<string>();
     }
 }
