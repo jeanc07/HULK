@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Numerics;
 using System.Runtime.InteropServices;
 /// <summary>
 /// Clase lexicon donde se guarda el lenguaje y se analiza la escritura correcta de cada token.
@@ -6,21 +7,16 @@ using System.Runtime.InteropServices;
 public class Lexicon
 {
     private List<string> symbols;
-
     private List<string> tokens;
-
     private List<string> mathTokens;
-
     private List<string> operators;
-
     private List<string> conditionOperators;
-
     private List<string> condicionToken;        
-
     private List<string> specialTokens;
-
     private List<SpecialTokensClass> specialTokensClass;
-
+    private List<Variable> variables;
+    private List<Function> functions;
+    private List<StringToken> stringTokens;
     private List<string> ifConditionOperators;
     private List<string> boolvalues;
     private bool isfunction;
@@ -70,6 +66,18 @@ public class Lexicon
     {
         return ifConditionOperators;
     }
+    public List<Variable> Variables()
+    {
+        return variables;
+    }
+    public List<StringToken> StringTokens()
+    {
+        return stringTokens;
+    }
+    public List<Function> Functions()
+    {
+        return functions;
+    }
     public Lexicon()
     {
 
@@ -113,7 +121,7 @@ public class Lexicon
         mathTokens.Add("sin");
         mathTokens.Add("cos"); 
         mathTokens.Add("log");
-        mathTokens.Add("PI");  
+        //mathTokens.Add("PI");  
 
         
         ifConditionOperators = new List<string>();
@@ -122,8 +130,14 @@ public class Lexicon
 
         specialTokens = new List<string>();
         specialTokensClass = new List<SpecialTokensClass>();
+        variables = new List<Variable>();
+        stringTokens = new List<StringToken>();
+        functions = new List<Function>();
         isfunction = false;
-        Variable PI = new Variable("PI","int","3");
+        Variable PI = new Variable("PI","int","3.14");
+        variables.Add(PI);
+        specialTokens.Add("PI");
+        specialTokensClass.Add(PI);
     }
 
     /// <summary>
@@ -137,7 +151,7 @@ public class Lexicon
         string wordToken = "";
         string wordNumber = "";
         string wordConditionOperator = "";
-        
+        Clearvar(this);
         for (int i = 0; i < line.Length; i++)
         {
             if((line.ElementAt(i) >= 97 && line.ElementAt(i) <= 122) || line[i] == '@')
@@ -147,7 +161,10 @@ public class Lexicon
                     if (isfunction)
                     {
                         int a = specialTokensClass.FindLastIndex(x => x is Function);
-                        ((Function)specialTokensClass.ElementAt(a)).Cuerpo.Add(wordNumber);
+                        if(((Function)specialTokensClass.ElementAt(a)).Cuerpo.Count == 0)
+                            ((Function)specialTokensClass.ElementAt(a)).Cuerpo.Add(wordNumber);
+                        else if (((Function)specialTokensClass.ElementAt(a)).Cuerpo.ElementAt(((Function)specialTokensClass.ElementAt(a)).Cuerpo.Count-1) != ";")
+                            ((Function)specialTokensClass.ElementAt(a)).Cuerpo.Add(wordNumber);
                     }
 
                     addIntegerAsToken(ref elements, wordNumber);
@@ -159,7 +176,10 @@ public class Lexicon
                     if (isfunction)
                     {
                         int a = specialTokensClass.FindLastIndex(x => x is Function);
-                        ((Function)specialTokensClass.ElementAt(a)).Cuerpo.Add(wordConditionOperator);
+                        if(((Function)specialTokensClass.ElementAt(a)).Cuerpo.Count == 0)
+                            ((Function)specialTokensClass.ElementAt(a)).Cuerpo.Add(wordConditionOperator);
+                        else if (((Function)specialTokensClass.ElementAt(a)).Cuerpo.ElementAt(((Function)specialTokensClass.ElementAt(a)).Cuerpo.Count-1) != ";")
+                            ((Function)specialTokensClass.ElementAt(a)).Cuerpo.Add(wordConditionOperator);
                     }                    
                     wordConditionOperator = "";
                 }
@@ -173,7 +193,10 @@ public class Lexicon
                     if (isfunction)
                     {
                         int a = specialTokensClass.FindLastIndex(x => x is Function);
-                        ((Function)specialTokensClass.ElementAt(a)).Cuerpo.Add(wordNumber);
+                        if(((Function)specialTokensClass.ElementAt(a)).Cuerpo.Count == 0)
+                            ((Function)specialTokensClass.ElementAt(a)).Cuerpo.Add(wordNumber);
+                        else if (((Function)specialTokensClass.ElementAt(a)).Cuerpo.ElementAt(((Function)specialTokensClass.ElementAt(a)).Cuerpo.Count-1) != ";")
+                            ((Function)specialTokensClass.ElementAt(a)).Cuerpo.Add(wordNumber);
                     }   
 
                     addIntegerAsToken(ref elements, wordNumber);
@@ -185,7 +208,10 @@ public class Lexicon
                     if (isfunction)
                     {
                         int a = specialTokensClass.FindLastIndex(x => x is Function);
-                        ((Function)specialTokensClass.ElementAt(a)).Cuerpo.Add(wordConditionOperator);
+                        if(((Function)specialTokensClass.ElementAt(a)).Cuerpo.Count == 0)
+                            ((Function)specialTokensClass.ElementAt(a)).Cuerpo.Add(wordConditionOperator);
+                        else if (((Function)specialTokensClass.ElementAt(a)).Cuerpo.ElementAt(((Function)specialTokensClass.ElementAt(a)).Cuerpo.Count-1) != ";")
+                            ((Function)specialTokensClass.ElementAt(a)).Cuerpo.Add(wordConditionOperator);
                     }                    
                     wordConditionOperator = "";
                 }
@@ -238,7 +264,10 @@ public class Lexicon
                     if (isfunction)
                     {
                         int a = specialTokensClass.FindLastIndex(x => x is Function);
-                        ((Function)specialTokensClass.ElementAt(a)).Cuerpo.Add(wordConditionOperator);
+                        if(((Function)specialTokensClass.ElementAt(a)).Cuerpo.Count == 0)
+                            ((Function)specialTokensClass.ElementAt(a)).Cuerpo.Add(wordConditionOperator);
+                        else if (((Function)specialTokensClass.ElementAt(a)).Cuerpo.ElementAt(((Function)specialTokensClass.ElementAt(a)).Cuerpo.Count-1) != ";")
+                            ((Function)specialTokensClass.ElementAt(a)).Cuerpo.Add(wordConditionOperator);
                     }                    
                     wordConditionOperator = "";
                 }
@@ -261,7 +290,10 @@ public class Lexicon
                     if (isfunction)
                     {
                         int a = specialTokensClass.FindLastIndex(x => x is Function);
-                        ((Function)specialTokensClass.ElementAt(a)).Cuerpo.Add(wordConditionOperator);
+                        if(((Function)specialTokensClass.ElementAt(a)).Cuerpo.Count == 0)
+                            ((Function)specialTokensClass.ElementAt(a)).Cuerpo.Add(wordConditionOperator);
+                        else if (((Function)specialTokensClass.ElementAt(a)).Cuerpo.ElementAt(((Function)specialTokensClass.ElementAt(a)).Cuerpo.Count-1) != ";")
+                            ((Function)specialTokensClass.ElementAt(a)).Cuerpo.Add(wordConditionOperator);
                     }                    
                     wordConditionOperator = "";
                 }
@@ -271,7 +303,10 @@ public class Lexicon
                     if (isfunction)
                     {
                         int a = specialTokensClass.FindLastIndex(x => x is Function);
-                        ((Function)specialTokensClass.ElementAt(a)).Cuerpo.Add(wordNumber);
+                        if(((Function)specialTokensClass.ElementAt(a)).Cuerpo.Count == 0)
+                            ((Function)specialTokensClass.ElementAt(a)).Cuerpo.Add(wordNumber);
+                        else if (((Function)specialTokensClass.ElementAt(a)).Cuerpo.ElementAt(((Function)specialTokensClass.ElementAt(a)).Cuerpo.Count-1) != ";")
+                            ((Function)specialTokensClass.ElementAt(a)).Cuerpo.Add(wordNumber);
                     }                    
 
                     addIntegerAsToken(ref elements, wordNumber);
@@ -303,7 +338,10 @@ public class Lexicon
                     if (isfunction)
                     {
                         int a = specialTokensClass.FindLastIndex(x => x is Function);
-                        ((Function)specialTokensClass.ElementAt(a)).Cuerpo.Add(phrase);
+                        if(((Function)specialTokensClass.ElementAt(a)).Cuerpo.Count == 0)
+                            ((Function)specialTokensClass.ElementAt(a)).Cuerpo.Add(phrase);
+                        else if (((Function)specialTokensClass.ElementAt(a)).Cuerpo.ElementAt(((Function)specialTokensClass.ElementAt(a)).Cuerpo.Count-1) != ";")
+                            ((Function)specialTokensClass.ElementAt(a)).Cuerpo.Add(phrase);
                     }                        
                     specialTokens.Add(phrase);
                     int previous = i-1;
@@ -315,7 +353,7 @@ public class Lexicon
                     {   
                         int index = specialTokensClass.FindLastIndex(x => x is Function);
                         if(index == specialTokens.Count-1){                                
-                            ((Function)specialTokensClass.ElementAt(index)).Parametro.ElementAt(0).Valor = phrase;
+                            ((Function)specialTokensClass.ElementAt(index)).Parametro.Add(new Variable(phrase, null, null));
                         }
                     }
                     if(line.ElementAt(previous).ToString() == ",")
@@ -397,7 +435,10 @@ public class Lexicon
                     if (isfunction)
                     {
                         int a = specialTokensClass.FindLastIndex(x => x is Function);
-                        ((Function)specialTokensClass.ElementAt(a)).Cuerpo.Add(wordNumber);
+                        if(((Function)specialTokensClass.ElementAt(a)).Cuerpo.Count == 0)
+                            ((Function)specialTokensClass.ElementAt(a)).Cuerpo.Add(wordNumber);
+                        else if (((Function)specialTokensClass.ElementAt(a)).Cuerpo.ElementAt(((Function)specialTokensClass.ElementAt(a)).Cuerpo.Count-1) != ";")
+                            ((Function)specialTokensClass.ElementAt(a)).Cuerpo.Add(wordNumber);
                     }                               
 
                     addIntegerAsToken(ref elements, wordNumber);
@@ -409,7 +450,10 @@ public class Lexicon
                     if (isfunction)
                     {
                         int a = specialTokensClass.FindLastIndex(x => x is Function);
-                        ((Function)specialTokensClass.ElementAt(a)).Cuerpo.Add(wordConditionOperator);
+                        if(((Function)specialTokensClass.ElementAt(a)).Cuerpo.Count == 0)
+                            ((Function)specialTokensClass.ElementAt(a)).Cuerpo.Add(wordConditionOperator);
+                        else if (((Function)specialTokensClass.ElementAt(a)).Cuerpo.ElementAt(((Function)specialTokensClass.ElementAt(a)).Cuerpo.Count-1) != ";")
+                            ((Function)specialTokensClass.ElementAt(a)).Cuerpo.Add(wordConditionOperator);
                     }                        
                     wordConditionOperator = "";
                 }
@@ -435,8 +479,12 @@ public class Lexicon
                     elements.Add(line.ElementAt(i).ToString());
                     if (isfunction)
                     {
+                        string test = line.ElementAt(i).ToString();
                         int a = specialTokensClass.FindLastIndex(x => x is Function);
-                        ((Function)specialTokensClass.ElementAt(a)).Cuerpo.Add(line.ElementAt(i).ToString());
+                        if(((Function)specialTokensClass.ElementAt(a)).Cuerpo.Count == 0)
+                            ((Function)specialTokensClass.ElementAt(a)).Cuerpo.Add(line.ElementAt(i).ToString());
+                        else if (((Function)specialTokensClass.ElementAt(a)).Cuerpo.ElementAt(((Function)specialTokensClass.ElementAt(a)).Cuerpo.Count-1) != ";")
+                            ((Function)specialTokensClass.ElementAt(a)).Cuerpo.Add(line.ElementAt(i).ToString());
                     }                         
                 }else
                 {
@@ -444,7 +492,10 @@ public class Lexicon
                     if (isfunction)
                     {
                         int a = specialTokensClass.FindLastIndex(x => x is Function);
-                        ((Function)specialTokensClass.ElementAt(a)).Cuerpo.Add(line.ElementAt(i).ToString()+line.ElementAt(i+1).ToString());
+                        if(((Function)specialTokensClass.ElementAt(a)).Cuerpo.Count == 0)
+                            ((Function)specialTokensClass.ElementAt(a)).Cuerpo.Add(line.ElementAt(i).ToString()+line.ElementAt(i+1).ToString());
+                        else if (((Function)specialTokensClass.ElementAt(a)).Cuerpo.ElementAt(((Function)specialTokensClass.ElementAt(a)).Cuerpo.Count-1) != ";")
+                            ((Function)specialTokensClass.ElementAt(a)).Cuerpo.Add(line.ElementAt(i).ToString()+line.ElementAt(i+1).ToString());
                     }                          
                     i++;
                     continue;                
@@ -457,7 +508,10 @@ public class Lexicon
                     if (isfunction)
                     {
                         int a = specialTokensClass.FindLastIndex(x => x is Function);
-                        ((Function)specialTokensClass.ElementAt(a)).Cuerpo.Add(wordNumber);
+                        if(((Function)specialTokensClass.ElementAt(a)).Cuerpo.Count == 0)
+                            ((Function)specialTokensClass.ElementAt(a)).Cuerpo.Add(wordNumber);
+                        else if (((Function)specialTokensClass.ElementAt(a)).Cuerpo.ElementAt(((Function)specialTokensClass.ElementAt(a)).Cuerpo.Count-1) != ";")
+                            ((Function)specialTokensClass.ElementAt(a)).Cuerpo.Add(wordNumber);
                     }                              
 
                     addIntegerAsToken(ref elements, wordNumber);
@@ -469,7 +523,10 @@ public class Lexicon
                     if (isfunction)
                     {
                         int a = specialTokensClass.FindLastIndex(x => x is Function);
-                        ((Function)specialTokensClass.ElementAt(a)).Cuerpo.Add(wordConditionOperator);
+                        if(((Function)specialTokensClass.ElementAt(a)).Cuerpo.Count == 0)
+                            ((Function)specialTokensClass.ElementAt(a)).Cuerpo.Add(wordConditionOperator);
+                        else if (((Function)specialTokensClass.ElementAt(a)).Cuerpo.ElementAt(((Function)specialTokensClass.ElementAt(a)).Cuerpo.Count-1) != ";")
+                            ((Function)specialTokensClass.ElementAt(a)).Cuerpo.Add(wordConditionOperator);
                     }                     
                     wordConditionOperator = "";
                 }
@@ -486,7 +543,10 @@ public class Lexicon
                     if (isfunction)
                     {
                         int a = specialTokensClass.FindLastIndex(x => x is Function);
-                        ((Function)specialTokensClass.ElementAt(a)).Cuerpo.Add(line.ElementAt(i).ToString()+line.ElementAt(i+1).ToString());
+                        if(((Function)specialTokensClass.ElementAt(a)).Cuerpo.Count == 0)
+                            ((Function)specialTokensClass.ElementAt(a)).Cuerpo.Add(line.ElementAt(i).ToString()+line.ElementAt(i+1).ToString());
+                        else if (((Function)specialTokensClass.ElementAt(a)).Cuerpo.ElementAt(((Function)specialTokensClass.ElementAt(a)).Cuerpo.Count-1) != ";")
+                            ((Function)specialTokensClass.ElementAt(a)).Cuerpo.Add(line.ElementAt(i).ToString()+line.ElementAt(i+1).ToString());
                     }                      
                     i++;
                     continue;
@@ -498,10 +558,12 @@ public class Lexicon
                     if (isfunction)
                     {
                         int a = specialTokensClass.FindLastIndex(x => x is Function);
-                        ((Function)specialTokensClass.ElementAt(a)).Cuerpo.Add(line.ElementAt(i).ToString());
+                        if(((Function)specialTokensClass.ElementAt(a)).Cuerpo.Count == 0)
+                            ((Function)specialTokensClass.ElementAt(a)).Cuerpo.Add(line.ElementAt(i).ToString());
+                        else if (((Function)specialTokensClass.ElementAt(a)).Cuerpo.ElementAt(((Function)specialTokensClass.ElementAt(a)).Cuerpo.Count-1) != ";")
+                            ((Function)specialTokensClass.ElementAt(a)).Cuerpo.Add(line.ElementAt(i).ToString());
                     }                     
                 }
-                                          
             }                               
         }
 
@@ -510,8 +572,11 @@ public class Lexicon
             if (isfunction)
             {
                 int a = specialTokensClass.FindLastIndex(x => x is Function);
-                ((Function)specialTokensClass.ElementAt(a)).Cuerpo.Add(wordToken);
-            }            
+                if(((Function)specialTokensClass.ElementAt(a)).Cuerpo.Count == 0)
+                    ((Function)specialTokensClass.ElementAt(a)).Cuerpo.Add(wordToken);
+                else if (((Function)specialTokensClass.ElementAt(a)).Cuerpo.ElementAt(((Function)specialTokensClass.ElementAt(a)).Cuerpo.Count-1) != ";")
+                    ((Function)specialTokensClass.ElementAt(a)).Cuerpo.Add(wordToken);
+                }            
             wordToken = "";
         }    
 
@@ -520,21 +585,105 @@ public class Lexicon
             if (isfunction)
             {
                 int a = specialTokensClass.FindLastIndex(x => x is Function);
-                ((Function)specialTokensClass.ElementAt(a)).Cuerpo.Add(wordNumber);
+                if(((Function)specialTokensClass.ElementAt(a)).Cuerpo.Count == 0)
+                    ((Function)specialTokensClass.ElementAt(a)).Cuerpo.Add(wordNumber);
+                else if (((Function)specialTokensClass.ElementAt(a)).Cuerpo.ElementAt(((Function)specialTokensClass.ElementAt(a)).Cuerpo.Count-1) != ";")
+                    ((Function)specialTokensClass.ElementAt(a)).Cuerpo.Add(wordNumber);
             }           
 
             addIntegerAsToken(ref elements, wordNumber);
             wordNumber = "";
         }                
 
+        BuildVar();
+        isfunction = false;
         return elements;
-    }        
+    }    
+    /// <summary>
+    /// Método para llenar las listas de StringToken y de variables
+    /// </summary>
+    private void BuildVar()
+    {
+        for (int i = 0; i < specialTokensClass.Count; i++)
+        {
+            if (specialTokensClass[i] is Variable)
+            {
+                variables.Add((Variable)specialTokensClass[i]);
+            }else if (specialTokensClass[i] is StringToken)
+            {
+                stringTokens.Add((StringToken)specialTokensClass[i]);
+            }else if (specialTokensClass[i] is Function)
+            {
+                functions.Add((Function)specialTokensClass[i]);
+            }
+        }
+    }
+    /// <summary>
+    /// Método que me elimina las variables usadas en la línea que acabo de ejecutar para ejecutar la próxima línea
+    /// </summary>
+    /// <param name="lex"></Resultado del análisis léxico>
+    private void Clearvar(Lexicon lex)
+    {
+        for (int i = 0; i < specialTokensClass.Count; i++)
+        {
+            if(specialTokensClass[i] is Variable)
+            {
+                if(specialTokensClass[i].Nombre != null && specialTokensClass[i].Nombre != "PI")
+                    specialTokens.Remove(specialTokensClass[i].Nombre);
+            }
+        }
+        specialTokensClass.RemoveAll(x => x.Nombre != "PI" && x is not Function && !isParameter(x.Nombre));
+        variables.RemoveAll(x => !isParameter(x.Nombre));
+        stringTokens.Clear();
+    }
+    /// <summary>
+    /// Método que revisa si el string es parámetro de una función
+    /// </summary>
+    /// <param name="check"></string a revisar>
+    /// <returns></True: si es parámetro. False: si no es parámetro.>
+    private bool isParameter(string check)
+    {
+        bool result = false;
+        for (int i = 0; i < functions.Count; i++)
+        {
+            List<Variable> temp = functions[i].Parametro;
+            for (int j = 0; j < temp.Count; j++)
+            {
+                if (temp[j].Nombre == check)
+                {
+                    result = true;
+                }
+            }
+        }
+
+        return result;
+    }
+    /// <summary>
+    /// Método que me dice si un string puede ser tratado como número y no de una operación matemática
+    /// </summary>
+    /// <param name="check"></String a analizar>
+    /// <returns></True: si es un número. False: si es una operación matemática.>
+    private bool IsNumber(string check)
+    {
+        bool result = true;
+        for (int i = 0; i < check.Length; i++)
+        {
+            if (check[i] == '-' && i == 0)
+                i++;
+            if (operators.Contains(check[i].ToString()))
+            {
+                result = false;
+            }
+        }
+
+        return result;
+    }
     /// <summary>
     /// Método que se encarga de crear las variables tipo int y guardarlas en su respectiva clase.
     /// </summary>
     /// <param name="elements"></Lista de tokens que ya se han analizado.>
     /// <param name="wordNumber"></Valor que recibirá la variable int.>
-    public void addIntegerAsToken(ref List<string> elements, string wordNumber)
+    private void addIntegerAsToken(ref List<string> elements, string wordNumber)
     {
         bool process = true;
 
@@ -549,10 +698,9 @@ public class Lexicon
                 {
                     if (elements[elements.Count - 3] == specialTokensClass.ElementAt(j).Nombre)
                     {
-                        List<string> splitlist = wordNumber.Split(new char[] {'+','-','*','/'}).ToList();
                         List<string> temp = new List<string>();
                         string tempstr = "";
-                        if (splitlist.Count > 1)
+                        if (!IsNumber(wordNumber))
                         {
                             for (int i = 0; i < wordNumber.Length; i++)
                             {
@@ -568,6 +716,12 @@ public class Lexicon
                             }
                             temp.Add(tempstr);
                             wordNumber = PredFunction.doArithmetic(temp,this).ToString();
+                        }else if (functions.Any(x => x.Nombre == wordNumber)) //LLamada de funcion
+                        {
+                            
+                        }else //Sublinea
+                        {
+                            
                         }
                         elements.RemoveAt(elements.Count-1);
                         elements.Add(wordNumber);
@@ -598,19 +752,23 @@ public class Lexicon
     /// <param name="line"></Línea ingresada por el usuario>
     /// <returns></True: Si se empleo algún elemento no válido. False: Si los elementos que se emplearon
     /// en la línea de código escrita por el usuario son válidos.>
-    bool checkToken(List<string> elements, string wordToken, string line)
+    private bool checkToken(List<string> elements, string wordToken, string line)
     {
         List<string> lineclone = line.Split(new char[] {' ',',',(char)'\\'}).ToList();
-        if(mathTokens.Contains(wordToken) || tokens.Contains(wordToken) || specialTokens.Contains(wordToken) || condicionToken.Contains(wordToken))
+        if(mathTokens.Contains(wordToken) || tokens.Contains(wordToken) || (specialTokens.Contains(wordToken) && wordToken != "PI") || condicionToken.Contains(wordToken))
         {
-            if(specialTokens.Contains(wordToken) && (elements.ElementAt(elements.Count-1) == "let" || elements.ElementAt(elements.Count-1) == ","))
-                return false;
+            if(elements.Count > 0)
+                if(specialTokens.Contains(wordToken) && (elements.ElementAt(elements.Count-1) == "let" || elements.ElementAt(elements.Count-1) == ","))
+                    return false;
 
             elements.Add(wordToken);
             if (isfunction)
             {
                 int a = specialTokensClass.FindLastIndex(x => x is Function);
-                ((Function)specialTokensClass.ElementAt(a)).Cuerpo.Add(wordToken);
+                if(((Function)specialTokensClass.ElementAt(a)).Cuerpo.Count == 0)
+                    ((Function)specialTokensClass.ElementAt(a)).Cuerpo.Add(wordToken);
+                else if (((Function)specialTokensClass.ElementAt(a)).Cuerpo.ElementAt(((Function)specialTokensClass.ElementAt(a)).Cuerpo.Count-1) != ";")
+                    ((Function)specialTokensClass.ElementAt(a)).Cuerpo.Add(wordToken);
             }           
         }
         else
@@ -680,8 +838,20 @@ public class Lexicon
                         elements.Add(wordToken);
                         if (isfunction)
                         {
-                            int a = specialTokensClass.FindLastIndex(x => x is Function);
-                            ((Function)specialTokensClass.ElementAt(a)).Cuerpo.Add(wordToken);
+                            int index = specialTokensClass.FindLastIndex(x => x is Function);
+                            if (/*index == specialTokens.Count - 2*/ index != -1)
+                            {
+                                ((Function)specialTokensClass.ElementAt(index)).Parametro.Add(new Variable(wordToken, null, null));
+                            }
+                            else
+                            {                       
+                                if(((Function)specialTokensClass.ElementAt(index)).Cuerpo.Count == 0)
+                                    ((Function)specialTokensClass.ElementAt(index)).Cuerpo.Add(wordToken);
+                                else if (((Function)specialTokensClass.ElementAt(index)).Cuerpo.ElementAt(((Function)specialTokensClass.ElementAt(index)).Cuerpo.Count-1) != ";")
+                                    ((Function)specialTokensClass.ElementAt(index)).Cuerpo.Add(wordToken);
+                            }
+
+
                         }                         
 
                         Variable v = new Variable(wordToken, null, null);
@@ -706,6 +876,10 @@ public class Lexicon
                 {
                     elements.Add(wordToken);
                     BoolToken temp = new BoolToken("",wordToken);
+                }else if (wordToken == "PI")
+                {
+                    elements.Add(wordToken);
+                    return true;
                 }                                                
                 else
                     return false;
