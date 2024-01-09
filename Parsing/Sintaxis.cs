@@ -1,3 +1,6 @@
+/// <summary>
+/// Clase designada para realizar el análisis sintáctico de las líneas de código
+/// </summary>
 public class SyntacticAnalisis
 {
     /// <summary>
@@ -37,20 +40,13 @@ public class SyntacticAnalisis
     /// </summary>
     /// <param name="lines"></Lista que contiene todas las líneas de código implementadas por el usuario>
     /// <returns></True: Si existe algun error. False: Si esta bien sintacticamente.>
-    public bool syntaxisAnalysis (List<string> lines)
+    public bool syntaxisAnalysis (List<string> currentTokens, Lexicon lex)
     {
         bool bad = false;
-        string line;
-        List<string> currentTokens;
         List<string> temp;
 
-        Lexicon lex = new Lexicon();
-
-        for (int i = 0; i < lines.Count && bad == false; i++)
-        {
-            line = lines[i].Trim();
-            currentTokens = lex.divideElements(line);
-                
+        for (int i = 0; i < currentTokens.Count && bad == false; i++)
+        {       
             if(currentTokens.ElementAt(currentTokens.Count-1) != ";")  //Chequeo de ;
             {
                 bad = true;
@@ -109,14 +105,13 @@ public class SyntacticAnalisis
 
             if(bad == false)
             {
-                if(int.TryParse(currentTokens.ElementAt(0), out _) || lex.Symbols().Contains(currentTokens.ElementAt(0)) || 
+                if((int.TryParse(currentTokens.ElementAt(0), out _) || lex.Symbols().Contains(currentTokens.ElementAt(0)) || 
                     lex.Operators().Contains(currentTokens.ElementAt(0)) ||lex.ConditionOperators().Contains(currentTokens.ElementAt(0)) ||
-                    lex.SpecialTokens().Contains(currentTokens.ElementAt(0))){   //Chequeo comienzo con operadores
+                    lex.SpecialTokens().Contains(currentTokens.ElementAt(0))) && !lex.SpecialTokensClass().Any(x => x is Function && x.Nombre == currentTokens.ElementAt(0))){   //Chequeo comienzo con operadores
                     bad = true;
                     }
                 else
                 {
-
                     int posIn = -1;
 
                     int contLet = currentTokens.FindAll(x => x == "let").Count;
@@ -156,7 +151,9 @@ public class SyntacticAnalisis
                             {
                                 if(!int.TryParse(subList.ElementAt(k), out _) && !lex.Operators().Contains(subList.ElementAt(k)) &&
                                     !lex.MathTokens().Contains(subList.ElementAt(k)) && !lex.SpecialTokens().Contains(subList.ElementAt(k)) &&
-                                    subList.ElementAt(k) != "(" && subList.ElementAt(k) != ")" &&  subList.ElementAt(k) != ",")
+                                    subList.ElementAt(k) != "(" && subList.ElementAt(k) != ")" &&  subList.ElementAt(k) != "," && subList.ElementAt(k) != "let"
+                                    && subList.ElementAt(k) != "in" && subList.ElementAt(k) != "if" && subList.ElementAt(k) != "else" && subList.ElementAt(k) != "print"
+                                    && !lex.Functions().Any(x => x.Nombre == subList.ElementAt(k)))
                                     {
                                         bad = true;
                                     }
@@ -314,10 +311,10 @@ public class SyntacticAnalisis
                                 continue;
                             }
 
-                            if (!int.TryParse(currentTokens.ElementAt(j+1), out _) && 
-                                !lex.SpecialTokens().Contains(currentTokens.ElementAt(j+1)) &&
-                                !lex.MathTokens().Contains(currentTokens.ElementAt(j+1)) && 
-                                currentTokens.ElementAt(j+1) != "(")
+                            if (!int.TryParse(currentTokens.ElementAt(j+1), out _) && !lex.SpecialTokens().Contains(currentTokens.ElementAt(j+1)) &&
+                                !lex.MathTokens().Contains(currentTokens.ElementAt(j+1)) && currentTokens.ElementAt(j+1) != "let" && currentTokens.ElementAt(j+1) != "if" &&
+                                currentTokens.ElementAt(j+1) != "print" && !lex.Functions().Any(x => x.Nombre == currentTokens.ElementAt(j+1)) 
+                                && currentTokens.ElementAt(j+1) != "(")
                             {
                                 bad = true;
                             }
@@ -444,9 +441,9 @@ public class SyntacticAnalisis
                                     goto Nnnn2;
                                 }
 
-                                if (currentTokens.ElementAt(j+1) != ")" && currentTokens.ElementAt(j+1) != "PI" && currentTokens.ElementAt(j+1) != "=>"
-                                && !int.TryParse(currentTokens.ElementAt(j+1), out _) && !lex.SpecialTokens().Contains(currentTokens.ElementAt(j+1))
-                                && currentTokens.ElementAt(j+1) != "else" && currentTokens.ElementAt(j+1) != "print" && currentTokens.ElementAt(j+1) != ";"
+                                if (currentTokens.ElementAt(j+1) != ")" && currentTokens.ElementAt(j+1) != "PI" && currentTokens.ElementAt(j+1) != "=>" && currentTokens.ElementAt(j+1) != "let"
+                                && !int.TryParse(currentTokens.ElementAt(j+1), out _) && !lex.SpecialTokens().Contains(currentTokens.ElementAt(j+1)) && currentTokens.ElementAt(j+1) != "if"
+                                && currentTokens.ElementAt(j+1) != "else" && currentTokens.ElementAt(j+1) != "print" && currentTokens.ElementAt(j+1) != ";" && !lex.Functions().Any(x => x.Nombre == currentTokens.ElementAt(j+1))
                                 && !lex.Operators().Contains(currentTokens.ElementAt(j+1)) && !lex.ConditionOperators().Contains(currentTokens.ElementAt(j+1)))
                                 {
                                     bad = true;   
@@ -461,7 +458,7 @@ public class SyntacticAnalisis
                                     goto Nnnn3;
                                 }
 
-                                if (currentTokens.ElementAt(j+1) != "if" && !lex.SpecialTokens().Contains(currentTokens.ElementAt(j+1)))
+                                if ((currentTokens.ElementAt(j+1) != "if" && !lex.SpecialTokens().Contains(currentTokens.ElementAt(j+1)) && !lex.MathTokens().Contains(currentTokens.ElementAt(j+1))))
                                 {
                                     bad = true;   
                                 }
@@ -521,7 +518,7 @@ public class SyntacticAnalisis
                         }else if (lex.SpecialTokens().Contains(currentTokens.ElementAt(j)))
                         {
                             if (currentTokens.ElementAt(j-1) != "(" && currentTokens.ElementAt(j-1) != "," && currentTokens.ElementAt(j-1) != "let" &&
-                                currentTokens.ElementAt(j-1) != "@" && currentTokens.ElementAt(j-1) != ")" && currentTokens.ElementAt(j-1) != "else" 
+                                currentTokens.ElementAt(j-1) != "@" && currentTokens.ElementAt(j-1) != ")" && currentTokens.ElementAt(j-1) != "else" && currentTokens.ElementAt(j-1) != "=>"
                                 && currentTokens.ElementAt(j-1) != "function" && currentTokens.ElementAt(j-1) != "in" && !lex.IfConditionOperator().Contains(currentTokens.ElementAt(j-1))
                                 && !lex.Operators().Contains(currentTokens.ElementAt(j-1)) && !lex.ConditionOperators().Contains(currentTokens.ElementAt(j-1)))
                             {
@@ -536,7 +533,7 @@ public class SyntacticAnalisis
                             }
                         }else if (int.TryParse(currentTokens.ElementAt(j), out _))
                         {
-                            if (currentTokens.ElementAt(j-1) != "(" && currentTokens.ElementAt(j-1) != "," && currentTokens.ElementAt(j-1) != "else"
+                            if (currentTokens.ElementAt(j-1) != "(" && currentTokens.ElementAt(j-1) != "," && currentTokens.ElementAt(j-1) != "else" && currentTokens.ElementAt(j-1) != "in"
                                 && currentTokens.ElementAt(j-1) != ")" && currentTokens.ElementAt(j-1) != "@" && !lex.IfConditionOperator().Contains(currentTokens.ElementAt(j-1))
                                 && !lex.Operators().Contains(currentTokens.ElementAt(j-1)) && !lex.ConditionOperators().Contains(currentTokens.ElementAt(j-1)))
                             {
@@ -545,7 +542,7 @@ public class SyntacticAnalisis
                             if (bad == false && currentTokens.ElementAt(j+1) != "(" && currentTokens.ElementAt(j+1) != "," && currentTokens.ElementAt(j+1) != "in"
                                 && !lex.Operators().Contains(currentTokens.ElementAt(j+1)) && !lex.ConditionOperators().Contains(currentTokens.ElementAt(j+1))
                                 && currentTokens.ElementAt(j+1) != ")" && currentTokens.ElementAt(j+1) != "@" && !lex.IfConditionOperator().Contains(currentTokens.ElementAt(j+1))
-                                && currentTokens.ElementAt(j+1) != ";")
+                                && currentTokens.ElementAt(j+1) != ";" && currentTokens.ElementAt(j+1) != "else")
                             {
                                 bad = true;
                             }
