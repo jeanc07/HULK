@@ -1,7 +1,7 @@
+using ParsingLibrary;
 using System.Data;
 using System.Net;
 using System.Reflection.Metadata.Ecma335;
-using System.Runtime.InteropServices.Marshalling;
 using System.Runtime.Serialization;
 using System.Security.AccessControl;
 using System.Xml.XPath;
@@ -10,6 +10,8 @@ using System.Xml.XPath;
 /// </summary>
 public class PredFunction
 {   
+    private static bool mathexception;
+    //private static bool makeclear = true;
     /// <summary>
     /// Método con el cual se resuelven las operaciones matemáticas implementadas por el usuario.
     /// </summary>
@@ -27,7 +29,13 @@ public class PredFunction
         List<SpecialTokensClass> tokenlist = lex.SpecialTokensClass();
         if (tokens.Count == 1)
         {
-            return Convert.ToDouble(tokens[0]);
+            if(lex.Variables().Any(x => x.Nombre == tokens[0]))
+            {
+                Variable temp = (Variable)lex.Variables().Where(x => x.Nombre == tokens[0]).ElementAt(0);
+                double a = double.Parse(temp.Valor);
+                return a;
+            }else
+                return Convert.ToDouble(tokens[0]);
         }
         if(tokens.ElementAt(0) == "(" && tokens.ElementAt(tokens.Count-1) == ")")
         {
@@ -112,13 +120,13 @@ public class PredFunction
         if(posParenthesis >= 0)
             result=doArithmetic(tokens, lex);  
 
-        for (int i = 0; i < tokens.Count-1; i++)
+        for (int i = 0; i < tokens.Count; i++)
         {
             if(i%2!=0)
             {
                 if (tokenlist.Count > 0 && checktokens(tokens))
                 {
-                    for (int j = 0; j < tokenlist.Count-1; j++)
+                    for (int j = 0; j < tokenlist.Count; j++)
                     {
                         if(tokens.ElementAt(i-1) == tokenlist.ElementAt(j).Nombre)
                             token1 = Convert.ToDouble(((Variable)tokenlist.ElementAt(j)).Valor);                            
@@ -137,8 +145,32 @@ public class PredFunction
                         if(token2 == -1)
                             number2 = double.Parse(tokens.ElementAt(i+1));                              
 
+                        if(tokens.ElementAt(i) == "^")
+                        {
+                            if(token2 != -1)  
+                                result = Math.Pow(result,token2);
+                            else
+                                result = Math.Pow(result,number2);
+
+                            tokens.RemoveAt(i-1);
+                            tokens.RemoveAt(i-1);
+                            tokens.RemoveAt(i-1);
+                            if(i < tokens.Count)
+                                tokens.Insert(i-1, result.ToString());
+                            else
+                                tokens.Add(result.ToString());
+                            
+                            i--;
+                            if(tokens.Count == 1)
+                                break;
+                        }  
                         if(tokens.ElementAt(i) == "/")
                         {
+                            if (token2 == 0 || number2 == 0)
+                            {
+                                mathexception = true;
+                                break;
+                            }
                             if(token2 != -1)  
                                 result/= token2;
                             else
@@ -201,6 +233,23 @@ public class PredFunction
                     number2 = double.Parse(tokens.ElementAt(i+1)); 
                     result = number1;
 
+                    if(tokens.ElementAt(i) == "^")
+                    { 
+                        result = Math.Pow(result,number2);
+
+                        tokens.RemoveAt(i-1);
+                        tokens.RemoveAt(i-1);
+                        tokens.RemoveAt(i-1);
+                        if(i < tokens.Count)
+                            tokens.Insert(i-1, result.ToString());
+                        else
+                            tokens.Add(result.ToString());
+                        exist = true;
+                        
+                        i--;
+                        if(tokens.Count == 1)
+                            break;
+                    }  
                     if(tokens.ElementAt(i) == "*")
                     { 
                         result*= number2;
@@ -221,6 +270,11 @@ public class PredFunction
 
                     if(tokens.ElementAt(i) == "/")
                     { 
+                        if (number2 == 0)
+                        {
+                            mathexception = true;
+                            break;
+                        }
                         result/= number2;
 
                         tokens.RemoveAt(i-1);
@@ -235,7 +289,7 @@ public class PredFunction
                         i--;
                         if(tokens.Count == 1)
                             break;
-                    }
+                    } 
 
                     if (tokens.ElementAt(i) == "%")
                     {
@@ -253,19 +307,19 @@ public class PredFunction
                         i--;
                         if(tokens.Count == 1)
                             break;
-                    }   
+                    }  
                 }                                                               
             }               
         }
 
         if(tokens.Count > 1 && exist == false){
-            for (int i = 0; i < tokens.Count-1; i++)
+            for (int i = 0; i < tokens.Count; i++)
             {
                 if(i%2!=0)
                 {
                     if (tokenlist.Count > 0 && checktokens(tokens))
                     {
-                    for (int j = 0; j < tokenlist.Count-1; j++)
+                    for (int j = 0; j < tokenlist.Count; j++)
                     {
                         if(tokens.ElementAt(i-1) == tokenlist.ElementAt(j).Nombre)
                             token1 = Convert.ToDouble(((Variable)tokenlist.ElementAt(j)).Valor);                            
@@ -391,7 +445,7 @@ public class PredFunction
             if (specials.Any(x => x is Variable && ((Variable)x).Nombre == lines[i] && (((Variable)x).Tipo == "string" || ((Variable)x).Tipo == "int")))
             {
                 string temp = lines[i];
-                SpecialTokensClass specialtemp = specials.Find(x => x is Variable && ((Variable)x).Nombre == lines[i] && (((Variable)x).Tipo == "string" || ((Variable)x).Tipo == "int"));
+                SpecialTokensClass? specialtemp = specials.Find(x => x is Variable && ((Variable)x).Nombre == lines[i] && (((Variable)x).Tipo == "string" || ((Variable)x).Tipo == "int"));
                 string temp2 = "";
                 if (specialtemp is Variable)
                 {
@@ -476,6 +530,35 @@ public class PredFunction
 
         return part;
     }
+    /// <summary>
+    /// Método que reemplaza una variable por su valor en la línea
+    /// </summary>
+    /// <param name="tokens"></Línea de código ingresada por el usuario>
+    /// <param name="lex"></Resultado del análisis léxico>
+    private static void ReplaceValue(List<string> tokens,Lexicon lex)
+    {
+        List<SpecialTokensClass> specials = lex.SpecialTokensClass();
+        if (specials.Any(x => x is Variable && tokens.Any(y => y == x.Nombre)))
+        {
+            for (int i = 0; i < tokens.Count; i++)
+            {
+                string value = "";
+                for (int j = 0; j < specials.Count; j++)
+                {
+                    if (tokens[i] == specials[j].Nombre)
+                    {
+                        if (specials[j] is Variable)
+                            value = ((Variable)specials[j]).Valor;
+                    }
+                }
+                if (value != "")
+                {
+                    tokens.Insert(i,value);
+                    tokens.Remove(tokens.ElementAt(i+1));
+                }
+            }
+        }
+    }
 
     /// <summary>
     /// Método que me prepara la línea de código para hacerle print
@@ -490,6 +573,7 @@ public class PredFunction
             tokens.RemoveAt(tokens.Count-2);
         else
             tokens.RemoveAt(tokens.Count-1);
+        ReplaceValue(tokens,lex);
         if (next(tokens,lex) == "")
         {
             print(tokens,lex);
@@ -756,6 +840,7 @@ public class PredFunction
         bool isnumber = false;
         bool isstring = false;
         List<SpecialTokensClass> special = lex.SpecialTokensClass();
+        string? operatorcondition = tempif.Find(x => lex.ConditionOperators().Contains(x));
         for (int i = 0; i < tempif.Count; i++)
         {
             for (int j = 0; j < special.Count; j++)
@@ -763,25 +848,25 @@ public class PredFunction
                 if (tempif[i] == special[j].Nombre && special[j] is Variable)
                 {
                     tempif[i] = ((Variable)special[j]).Valor.ToString();
-                    if (tempif[i][0] >= 48 && tempif[i][0] <= 57)
+                    if (double.TryParse(tempif[i], out _))
                     {
                         isnumber = true; 
-                        break;  
+                        //break;  
                     }else if(tempif[i] != "true" || tempif[i] != "false")
                     {
                         isstring = true;
-                        break;
+                        //break;
                     }
                 }else
                 {
-                    if (tempif[i][0] >= 48 && tempif[i][0] <= 57)
+                    if (double.TryParse(tempif[i], out _))
                     {
                         isnumber = true; 
-                        break;  
+                        //break;  
                     }else if(tempif[i] != "true" || tempif[i] != "false")
                     {
                         isstring = true;
-                        break;
+                        //break;
                     }
                 }
             }
@@ -790,79 +875,147 @@ public class PredFunction
         if (isnumber || isstring)
         {
             List<int> numbers = checkif(tempif,"%");
-            List<int> equals = checkif(tempif,"==");
+            List<int> equals = checkif(tempif,operatorcondition);
             List<int> concat = checkif(tempif,"@");
+            double resultdouble1 = 0, resultdouble2 = 0;
+            string resultstring1 = "", resultstring2 = "";
             if (numbers.Count > 0 && isnumber)
             {
                 for (int i = 0; i < equals.Count; i++)
                 {                       
-                    double resulttemp1 = 0;
-                    double resulttemp2 = 0;
                     List<string> temp1 = tempif.GetRange(0,equals.ElementAt(i));
-                    resulttemp1 = doArithmetic(temp1,lex);
+                    resultdouble1 = doArithmetic(temp1,lex);
                     List<string> temp2 = new List<string>();
 
                     temp2 = tempif.GetRange(equals.ElementAt(i)+1,tempif.Count-(equals.ElementAt(i)+1));
-                    resulttemp2 = doArithmetic(temp2,lex);
-
-                    if (resulttemp1 == resulttemp2)
-                    {
-                        result = true;
-                    }else
-                    {
-                        result = false;
-                    }
+                    resultdouble2 = doArithmetic(temp2,lex);
                 }
 
             }else if(numbers.Count == 0 && isnumber)
             {
                 List<string> prueba1 = tempif.GetRange(0,equals.ElementAt(0));
                 List<string> prueba2 = tempif.GetRange(equals.ElementAt(0)+1,(tempif.Count)-(equals.ElementAt(0)+1));
-                double temp = doArithmetic(tempif.GetRange(0,equals.ElementAt(0)),lex);
-                double temp2 = doArithmetic(tempif.GetRange(equals.ElementAt(0)+1,(tempif.Count)-(equals.ElementAt(0)+1)),lex);
-
-                if (temp == temp2)
-                    result = true;
-                else    
-                    result = false;
+                resultdouble1 = doArithmetic(tempif.GetRange(0,equals.ElementAt(0)),lex);
+                resultdouble2 = doArithmetic(tempif.GetRange(equals.ElementAt(0)+1,(tempif.Count)-(equals.ElementAt(0)+1)),lex);
+                
             }else if (concat.Count > 0 && isstring)
             {
                 for (int i = 0; i < equals.Count; i++)
                 {                       
-                    string resulttemp1 = "";
-                    string resulttemp2 = "";
                     List<string> temp1 = tempif.GetRange(0,equals.ElementAt(i));
-                    resulttemp1 = Concat(temp1,lex);
+                    resultstring1 = Concat(temp1,lex);
                     List<string> temp2 = new List<string>();
 
                     temp2 = tempif.GetRange(equals.ElementAt(i)+1,tempif.Count-(equals.ElementAt(i)+1));
-                    resulttemp2 = Concat(temp2,lex);
-
-                    if (resulttemp1 == resulttemp2)
-                    {
-                        result = true;
-                    }else
-                    {
-                        result = false;
-                    }
+                    resultstring2 = Concat(temp2,lex);
                 }
             }else if(concat.Count == 0 && isstring)
             {
-                string temp1 = tempif.ElementAt(equals.ElementAt(0)-1);
-                string temp2 = tempif.ElementAt(equals.ElementAt(0)+1);
-                if (temp1 == temp2)
-                    result = true;
-                else    
-                    result = false;
+                resultstring1 = tempif.ElementAt(equals.ElementAt(0)-1);
+                resultstring2 = tempif.ElementAt(equals.ElementAt(0)+1);
+            }
+
+            if (operatorcondition == "==")
+            {
+                if (isnumber)
+                {
+                    if(resultdouble1 == resultdouble2)
+                        result = true;
+                    else
+                        result = false;
+                }else if (isstring)
+                {
+                    if(resultstring1 == resultstring2)
+                        result = true;
+                    else
+                        result = false;
+                }
+            }else if (operatorcondition == "!=")
+            {
+                if (isnumber)
+                {
+                    if(resultdouble1 != resultdouble2)
+                        result = true;
+                    else 
+                        result = false;
+                }else if (isstring)
+                {
+                    if(resultstring1 != resultstring2)
+                        result = true;
+                    else
+                        result = false;
+                }
+            }else if (operatorcondition == ">=")
+            {
+                if (isnumber)
+                {
+                    if(resultdouble1 >= resultdouble2)
+                        result = true;
+                    else
+                        result = false;
+                }
+            }else if (operatorcondition == "<=")
+            {
+                if (isnumber)
+                {
+                    if(resultdouble1 <= resultdouble2)
+                        result = true;
+                    else
+                        result = false;
+                }
+            }else if (operatorcondition == ">")
+            {
+                if (isnumber)
+                {
+                    if(resultdouble1 > resultdouble2)
+                        result = true;
+                    else
+                        result = false;
+                }
+            }else if (operatorcondition == "<")
+            {
+                if (isnumber)
+                {
+                    if(resultdouble1 < resultdouble2)
+                        result = true;
+                    else
+                        result = false;
+                }
             }
         }else if (tempif.Any(x => x == "true") || tempif.Any(x => x == "false"))
         {
-            List<int> truepos = checkif(tempif,"true");
-            List<int> falsepos = checkif(tempif,"false");
-            if (truepos.Count > 0)
-                result = true;
-            else
-                result = false;          
+            List<int> equals = checkif(tempif,operatorcondition);
+            int operatorindex = tempif.FindIndex(x => x == operatorcondition);
+            if (equals.Count > 0)
+            {
+                if (operatorcondition == "==")
+                {
+                    if (operatorindex != -1)
+                    {
+                        if (tempif[operatorindex-1] == tempif[operatorindex+1])
+                            result = true;
+                        else
+                            result = false;
+                    }
+                }else
+                {
+                    if (operatorindex != -1)
+                    {
+                        if (tempif[operatorindex-1] != tempif[operatorindex+1])
+                            result = true;
+                        else
+                            result = false;
+                    }
+                }
+            }else
+            {
+                List<int> truepos = checkif(tempif,"true");
+                List<int> falsepos = checkif(tempif,"false");
+                if (truepos.Count > 0)
+                    result = true;
+                else
+                    result = false;  
+            }
         }
         
         return result;
@@ -977,29 +1130,206 @@ public class PredFunction
         return result;
     }
     /// <summary>
+    /// Método que chequea si una función es recursiva
+    /// </summary>
+    /// <param name="tokens"></Línea de código ingresada por el usuario>
+    /// <param name="function"></nombre de la función>
+    /// <returns></returns>
+    private static bool CheckRec(List<string> tokens, string function)
+    {
+        bool resuelt = false;
+        for (int i = 0; i < tokens.Count; i++)
+        {
+            if (tokens[i] == function)
+            {
+                resuelt = true;
+            }
+        }
+
+        return resuelt;
+    }
+    /// <summary>
     /// Método que implementa la funcionalidad de las funciones.
     /// </summary>
     /// <param name="lines"></Línead de código ingresada por el usuario.>
     /// <param name="lex"></Resultado del análisis léxico>
     /// <returns></Retorna el resultado de haber ejecutado dicha funcion>
-    public static List<string> ExecuteFunction(List<string> lines, Lexicon lex)
+    public static List<string> ExecuteFunction(List<string> lines,string function,List<string> Parametro, Lexicon lex)
     {
+        //REVISAR PROBLEMA CON EL PARAMETRO DE LA FUNCION
         List<string> result = new List<string>();
+        List<SpecialTokensClass> specials = lex.SpecialTokensClass();
+        Parametro.RemoveAll(x => x == ",");
+        List<string> paramscopy = new List<string>();
+        paramscopy.AddRange(Parametro);
+        if (specials.Any(x => x is Function && x.Nombre == function && ((Function)x).Cuerpo.Contains(function)))
+        {
+            Function temp = (Function)specials.Find(x => x is Function && x.Nombre == function);
+            Cleartrash(temp);
+            List<string> tempcorp = new List<string>();
+            tempcorp.AddRange(temp.Cuerpo);
+            List<Variable> tempparams = new List<Variable>();
+            tempparams.AddRange(temp.Parametro);
+            for (int i = 0; i < tempcorp.Count; i++)
+            {
+                for (int j = 0; j < tempparams.Count; j++)
+                {
+                    if (tempcorp[i] == tempparams[j].Nombre)
+                    {
+                        List<string> parametrotemp = Giveme(paramscopy,j);
+                        parametrotemp.Add(";");
+                        //makeclear = false;
+                        string doneparam = Executeline(parametrotemp,lex).ElementAt(0);
+                    
+                        tempcorp[i] = doneparam;
+                    }
+                }
+            }
 
+            List<string> ifData = new List<string>();
+            List<string> elseData = new List<string>();
+            List<string> ifConditionData = new List<string>();
+            List<string> tempif = if_else(tempcorp,ref ifData,ref elseData,ref ifConditionData,lex);
+            bool isrec = CheckRec(tempif,function);
+            if (isrec)
+            {
+                tempif.Add(";");
+                for (int i = 0; i < tempif.Count; i++)
+                {
+                    if (tempif[i] == function)
+                    {
+                        int temppos = CloseFunc(tempif,i);
+                        List<string> paramtemp = tempif.GetRange(i+2,temppos-(i+2));
+                        List<string> functtemp = tempif.GetRange(i,temppos+1-i);
+                        List<string> finalfunc = new List<string>();
+                        finalfunc.AddRange(functtemp);
+                        finalfunc.Add(";");
+                        paramtemp.RemoveAll(x => x == ",");
+                        int poscom = finalfunc.FindIndex(finalfunc.IndexOf(function), x => x == "(");
+                        for (int j = 0; j < paramtemp.Count; j++)
+                        {
+                            //parametros para llamada recursiva
+                            int poscomtemp = poscom+1;
+                            if(poscom != -1)
+                                poscom = finalfunc.FindIndex(poscom, x => x == ",");
+                            paramtemp.Add(";");
+                            paramtemp[j] = Executeline(paramtemp,lex).ElementAt(0);
+                            finalfunc.Insert(poscomtemp,paramtemp[j]);
+                            int tempint = CloseFunc(finalfunc,finalfunc.IndexOf(function));
+                            finalfunc.RemoveRange(poscomtemp+1,tempint-(poscomtemp+1));
+                        }
+                        List<string> tempresult = ExecuteFunction(finalfunc,function,paramtemp,lex);
+                        tempif.InsertRange(i,tempresult);
+                        temppos = CloseFunc(tempif,tempif.FindIndex(i,x => x == function));
+                        tempif.RemoveRange(i+tempresult.Count,temppos-(i+tempresult.Count)+1);
+                        finalfunc.Remove(";");
+                    }
+                }
+                tempif.Remove(";");
+                if (!tempif.Any(x => x == function) && next(tempif,lex) == "math")
+                {
+                    string temres = doArithmetic(tempif,lex).ToString();
+                    result.Add(temres);
+                    return result;
+                }else if (next(tempif,lex) != "math" && next(tempif,lex) != "")
+                {
+                    
+                }
+            }else
+            {
+                //makeclear = true;
+                return tempif;
+            }
 
-
-
+        }else
+        {
+            Function temp = lex.Functions().Find(x => x is Function && x.Nombre == function);
+            List<string> tempcorp = new List<string>();
+            Cleartrash(temp);
+            tempcorp.AddRange(temp.Cuerpo);
+            List<Variable> tempparams = new List<Variable>();
+            tempparams.AddRange(temp.Parametro);
+            for (int i = 0; i < tempcorp.Count; i++)
+            {
+                for (int j = 0; j < tempparams.Count; j++)
+                {
+                    if (tempcorp[i] == tempparams[j].Nombre)
+                    {
+                        List<string> parametrotemp = Giveme(paramscopy,j);
+                        tempcorp.InsertRange(i,parametrotemp);
+                        tempcorp.RemoveAt(i+parametrotemp.Count);
+                    }
+                }
+            }
+            result = tempcorp;
+        }
         return result;
     }
-
     /// <summary>
-    /// Método que retorna la posición de cierre de la instrucción dada
+    /// Método encargado de retornar los parámetros de la función
     /// </summary>
-    /// <param name="lines"></Línea de código ingresada por el usuario.>
-    /// <param name="lex"></Resultado del análisis léxico>
-    /// <param name="token"></Parámetro a buscar>
-    /// <returns></Retorna la posición de cierre de la instrucción dada>
-    public static int ClosePos(List<string> lines, Lexicon lex, int posIn)
+    /// <param name="parametro"></Lista con los parámetros de la función>
+    /// <returns></Retorna una lista con los parámetros de la función ordenados>
+    private static List<string> Giveme(List<string> parametro, int parampos)
+    {
+        List<string> result = new List<string>();
+        bool check = false;
+        int count = 0 , pos = 0;
+        if (parametro.Count == 1)
+            return parametro;
+        for (int i = 0; i < parametro.Count-1; i++)
+        {
+            if (double.TryParse(parametro[i],out _))
+                check = true;
+            else
+                check = false;
+            if (check && double.TryParse(parametro[i+1],out _))
+            {
+                count++;
+                if (count == parampos)
+                {
+                    pos = i+1;
+                }
+            }
+        }
+
+        for (int i = pos; i < parametro.Count-1; i++)
+        {
+            if (double.TryParse(parametro[i],out _))
+                check = true;
+            else
+                check = false;
+            if (check && double.TryParse(parametro[i+1],out _))
+            {
+                result.Add(parametro[i]);
+                break;
+            }else
+            {
+                result.Add(parametro[i]);
+            }
+            if (i == parametro.Count -2)
+                result.Add(parametro[i+1]);
+        }
+        return result;
+    }
+    /// <summary>
+    /// Método encargado de eliminar caracteres innecesarios en el cuerpo de la función
+    /// </summary>
+    /// <param name="actual"></Función sobre la cual se va a realizar la acción>
+    public static void Cleartrash(Function actual)
+    {
+        int tempos = actual.Cuerpo.FindIndex(x => x == "=>");
+        actual.Cuerpo.RemoveRange(0,tempos+1);
+        if(actual.Cuerpo.ElementAt(actual.Cuerpo.Count-1) == ";")
+            actual.Cuerpo.RemoveAt(actual.Cuerpo.Count-1);
+    }
+    /// <summary>
+    /// Método que me devuelve la poscición de cierre de la llamada de la función en la línea
+    /// </summary>
+    /// <param name="lines"></Línea de código ingresada por el usuario>
+    /// <param name="posIn"></posición de la funcion en la línea>
+    /// <returns></Retorna la posición de cierre de la llamada de la función en la línea>
+    public static int CloseFunc(List<string> lines, int posIn)
     {
         int result = 0;
         int countOpen = 0, countClose = 0;
@@ -1015,14 +1345,71 @@ public class PredFunction
             {
                 result = i-1;
                 break;
-            }else if (countClose > countOpen && countClose != 0 && countOpen != 0)
+            }else if (countClose >= countOpen && countClose != 0 && countOpen != 0)
             {
-                result = i+1;
+                result = i;
                 break;
             }
         }
         return result;
     }
+
+    /// <summary>
+    /// Método que retorna la posición de cierre de la instrucción dada
+    /// </summary>
+    /// <param name="lines"></Línea de código ingresada por el usuario.>
+    /// <param name="lex"></Resultado del análisis léxico>
+    /// <param name="token"></Parámetro a buscar>
+    /// <returns></Retorna la posición de cierre de la instrucción dada>
+    public static int ClosePos(List<string> lines, int posIn)
+    {
+        int result = 0;
+        int countOpen = 0, countClose = 0;
+
+        for (int i = posIn + 1; i < lines.Count; i++)
+        {
+            if(lines.ElementAt(i) == "(")
+                countOpen++;
+            else if(lines.ElementAt(i) == ")")
+                countClose++;
+
+            if(lines.ElementAt(i) == ";")
+            {
+                result = i-1;
+                break;
+            }else if (countClose > countOpen && (countClose != 0 || countOpen != 0))
+            {
+                result = i-1;
+                break;
+            }
+        }
+        return result;
+    }
+    /// <summary>
+    /// Método que retorna el nombre de la función que se llamara proximamente en caso de existir otro llamado
+    /// </summary>
+    /// <param name="lines"></Línea de código ingresada por el usuario>
+    /// <param name="lex"></Resultado del análisis léxico>
+    /// <returns></Retorna el nombre de una función en caso de existir otro llamado>
+    public static string nextFunc(List<string> lines,Lexicon lex)
+    {
+        string result = "";
+        List<SpecialTokensClass> special = lex.SpecialTokensClass();
+        if (lines.Count == 2 && lines[lines.Count-1] == ";")
+        {
+            lines.RemoveAt(lines.Count-1);
+        }
+        for (int i = 0; i < lines.Count; i++)
+        {
+            if (special.Any(x =>  x is Function && ((Function)x).Nombre == lines[i]))
+            {
+                result = special.Where(x => x is Function && x.Nombre == lines[i]).ElementAt(0).Nombre;
+                break;
+            }
+        }
+        return result;
+    }
+
     /// <summary>
     /// Método con el cual se ejecutan las líneas igresadas por el usuario
     /// </summary>
@@ -1033,34 +1420,35 @@ public class PredFunction
     {
         List<string> result = new List<string>();
         List<SpecialTokensClass> tokens = lex.SpecialTokensClass();
+        if(lines[0] == "function")
+            return result;
         if (next(lines,lex) == "")
         {
             result = lines;
         }else
         {
+            //chequear los removerange
             if (next(lines,lex) == "let")
             {
                 int tem = lines.FindIndex(0,x => x == "let");
                 bool valid = true;
-                List<string> temp = let_in(lines,ref valid);
+                List<string> temp = let_in(lines,ref valid);  
                 lines.InsertRange(tem,temp);
                 tem = lines.FindIndex(temp.Count,x => x == "let");
-                int tempclosein = ClosePos(lines,lex,lines.FindIndex(temp.Count, x => x == "in"));
-                lines.RemoveRange(tem,tempclosein-tem); //Buscar cierre del in
+                int tempclosein = ClosePos(lines,lines.FindIndex(temp.Count, x => x == "in"));
+                lines.RemoveRange(tem,tempclosein-tem+1); //Buscar cierre del in
                 result = Executeline(lines,lex);
             }else if (next(lines,lex) == "if")
             {
                 List<string> ifdata = new List<string>();
                 List<string> ifconditiondata = new List<string>();
                 List<string> elsedata = new List<string>();
-                //lines = if_else(lines,ref ifdata, ref elsedata,ref ifconditiondata, lex);
-                //result = Executeline(lines,lex);
                 int tem = lines.FindIndex(0,x => x == "if");
                 List<string> temp = if_else(lines,ref ifdata,ref elsedata,ref ifconditiondata,lex);
                 lines.InsertRange(tem,temp);
                 tem = lines.FindIndex(temp.Count,x => x == "if");
-                int tempclosein = ClosePos(lines,lex,lines.FindIndex(temp.Count, x => x == "if"));
-                lines.RemoveRange(tem,tempclosein-tem);
+                int tempclosein = ClosePos(lines,lines.FindIndex(temp.Count, x => x == "if"));
+                lines.RemoveRange(tem,tempclosein-tem+1);
                 result = Executeline(lines,lex);
             }else if (next(lines,lex) == "print")
             {
@@ -1068,7 +1456,16 @@ public class PredFunction
                 print(lines,lex);
             }else if(next(lines,lex) == "function")
             {
-                lines = ExecuteFunction(lines,lex);
+                string functiontemp = nextFunc(lines,lex);
+                int tem = lines.FindIndex(0, x => x == functiontemp);
+                int closetem = ClosePos(lines,tem);
+                List<string> temp = new List<string>();
+                List<string> parameters = lines.GetRange(tem+2,closetem - (tem+2));
+                temp = ExecuteFunction(lines,functiontemp,parameters,lex);
+                lines.InsertRange(tem,temp);
+                tem = lines.FindIndex(temp.Count+tem, x => x == functiontemp);
+                closetem = ClosePos(lines,tem);
+                lines.RemoveRange(tem,closetem - tem+1);
                 result = Executeline(lines,lex);
             }else
             {
@@ -1078,8 +1475,12 @@ public class PredFunction
                 string resulttemp = doArithmetic(temp,lex).ToString();
                 lines.Insert(0,resulttemp);
                 lines.RemoveRange(1,lines.Count-1);
+                result = Executeline(lines,lex);
             }
         }
+        ReplaceValue(lines,lex);
+        //if(makeclear)
+            //Clearvar(lex);
         return result;
     }
 
@@ -1124,4 +1525,26 @@ public class PredFunction
         }
         return result;
     }
+    /// <summary>
+    /// Método que me elimina las variables usadas en la línea que acabo de ejecutar para ejecutar la próxima línea
+    /// </summary>
+    /// <param name="lex"></Resultado del análisis léxico>
+    /*private static void Clearvar(Lexicon lex)
+    {
+        List<SpecialTokensClass> specials = lex.SpecialTokensClass();
+        List<string> specialtok = lex.SpecialTokens();
+        List<Variable> variables = lex.Variables();
+        List<StringToken> stringTokens = lex.StringTokens();
+        for (int i = 0; i < specials.Count; i++)
+        {
+            if(specials[i] is Variable)
+            {
+                if(specials[i].Nombre != null && specials[i].Nombre != "PI")
+                    specialtok.Remove(specials[i].Nombre);
+                specials.RemoveAll(x => x.Nombre != "PI");
+            }
+        }
+        variables.RemoveAll(x => x.Nombre != "PI");
+        stringTokens.RemoveAll(x => x.Nombre != "PI");
+    }*/
 }
