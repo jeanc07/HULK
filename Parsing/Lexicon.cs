@@ -20,7 +20,7 @@ public class Lexicon
     private List<string> ifConditionOperators;
     private List<string> boolvalues;
     private bool isfunction;
-
+    private int lastposition;
     public bool IsFunction ()
     {
         return isfunction;
@@ -120,8 +120,7 @@ public class Lexicon
         mathTokens = new List<string>();
         mathTokens.Add("sin");
         mathTokens.Add("cos"); 
-        mathTokens.Add("log");
-        //mathTokens.Add("PI");  
+        mathTokens.Add("log"); 
 
         
         ifConditionOperators = new List<string>();
@@ -253,7 +252,7 @@ public class Lexicon
             || line[i] == '*' || line[i] == '/')
             {
                 if(wordToken != ""){
-                    bool check = checkToken(elements, wordToken,line);
+                    bool check = checkToken(elements, wordToken,line,i);
                     if(!check)
                         return new List<string>();
                     wordToken = "";
@@ -279,7 +278,7 @@ public class Lexicon
             else if(line.ElementAt(i).ToString() == ('"').ToString())
             {
                 if(wordToken != ""){
-                    bool check = checkToken(elements, wordToken,line);
+                    bool check = checkToken(elements, wordToken,line,i);
                     if(!check)
                         return new List<string>();
                     wordToken = "";
@@ -459,7 +458,7 @@ public class Lexicon
                 }
 
                 if(wordToken != ""){
-                    bool check = checkToken(elements, wordToken,line);
+                    bool check = checkToken(elements, wordToken,line,i);
                     if(!check)
                         return new List<string>();
                     wordToken = "";                                                          
@@ -532,7 +531,7 @@ public class Lexicon
                 }
 
                 if(wordToken != ""){
-                    bool check = checkToken(elements, wordToken,line);
+                    bool check = checkToken(elements, wordToken,line,i);
                     if(!check)
                         return new List<string>();
                     wordToken = "";
@@ -633,7 +632,8 @@ public class Lexicon
             }
         }
         specialTokensClass.RemoveAll(x => x.Nombre != "PI" && x is not Function && !isParameter(x.Nombre));
-        variables.RemoveAll(x => !isParameter(x.Nombre));
+        //variables.RemoveAll(x => !isParameter(x.Nombre));
+        variables.Clear();
         stringTokens.Clear();
     }
     /// <summary>
@@ -752,10 +752,10 @@ public class Lexicon
     /// <param name="line"></Línea ingresada por el usuario>
     /// <returns></True: Si se empleo algún elemento no válido. False: Si los elementos que se emplearon
     /// en la línea de código escrita por el usuario son válidos.>
-    private bool checkToken(List<string> elements, string wordToken, string line)
+    private bool checkToken(List<string> elements, string wordToken, string line, int pos)
     {
         List<string> lineclone = line.Split(new char[] {' ',',',(char)'\\'}).ToList();
-        if(mathTokens.Contains(wordToken) || tokens.Contains(wordToken) || (specialTokens.Contains(wordToken) && wordToken != "PI") || condicionToken.Contains(wordToken))
+        if(mathTokens.Contains(wordToken) || tokens.Contains(wordToken) || (specialTokens.Contains(wordToken) && !isParameter(wordToken) && wordToken != "PI") || condicionToken.Contains(wordToken))
         {
             if(elements.Count > 0)
                 if(specialTokens.Contains(wordToken) && (elements.ElementAt(elements.Count-1) == "let" || elements.ElementAt(elements.Count-1) == ","))
@@ -777,14 +777,65 @@ public class Lexicon
             {
                 if(elements.ElementAt(elements.Count-1) == "let" )
                 {
-                    specialTokens.Add(wordToken);
-                    elements.Add(wordToken);
-
-                    Variable v = new Variable(wordToken, null, null);
-                    if(!specialTokensClass.Exists(x => x.Nombre == v.Nombre))
-                        specialTokensClass.Add(v);
-                    else
-                        return false;
+                    if (elements.Count >= 2)
+                    {
+                        if (elements.ElementAt(elements.Count-2) == "=")
+                        {
+                            elements.Add(wordToken);
+                            string subline = Makesubline(line,pos,elements);
+                            subline+=';';
+                            List<string> execute = new List<string>();
+                            List<string> subelements = divideElements(subline);
+                            if (subelements.Count > 0)
+                            {
+                                SyntacticAnalisis sa = new SyntacticAnalisis();
+                                bool syntaxisAnalysis = sa.syntaxisAnalysis(subelements,this);
+                                Semantic sea = new Semantic();
+                                bool semanticAnalysis = sea.SemanticAnalysis(subelements,this);
+                                if (!syntaxisAnalysis && !semanticAnalysis)
+                                {
+                                    execute = PredFunction.Executeline(subelements,this);
+                                    
+                                }else
+                                {
+                                    
+                                }
+                            }
+                            if (execute.Count > 0)
+                            {
+                                string temp = "";
+                                if(double.TryParse(execute[0],out _))
+                                    temp = "int";
+                                else if(execute[0] == "true" || execute[0] == "false")
+                                    temp = "bool";
+                                else
+                                    temp = "string";
+                                Variable v = new Variable(wordToken, temp, execute[0]);
+                                if(!specialTokensClass.Exists(x => x.Nombre == v.Nombre))
+                                    specialTokensClass.Add(v);
+                                else
+                                    return false;
+                            }
+                        }else
+                        {
+                            specialTokens.Add(wordToken);
+                            elements.Add(wordToken);
+                            Variable v = new Variable(wordToken, null, null);
+                            if(!specialTokensClass.Exists(x => x.Nombre == v.Nombre))
+                                specialTokensClass.Add(v);
+                            else
+                                return false;
+                        }
+                    }else
+                    {
+                        specialTokens.Add(wordToken);
+                        elements.Add(wordToken);
+                        Variable v = new Variable(wordToken, null, null);
+                        if(!specialTokensClass.Exists(x => x.Nombre == v.Nombre))
+                            specialTokensClass.Add(v);
+                        else
+                            return false;
+                    }
                 }
                 else if(elements.ElementAt(elements.Count-1) == "function")
                 {
@@ -802,7 +853,7 @@ public class Lexicon
                 {
                     if(elements.Count >= 5)
                     {
-                        if( elements.ElementAt((elements.Count-1)-4) == "let")
+                        if(elements.ElementAt((elements.Count-1)-4) == "let")
                         {
                             specialTokens.Add(wordToken);
                             elements.Add(wordToken);                            
@@ -823,6 +874,25 @@ public class Lexicon
                             int index = specialTokensClass.FindLastIndex(x => x is Function);
                             ((Function)specialTokensClass.ElementAt(index)).Parametro.Add(v);                                      
 
+                        }else if (elements.ElementAt(elements.Count-1) == "," && elements.Count >= 7 && elements[0] == "function")
+                        {
+                            specialTokens.Add(wordToken);
+                            elements.Add(wordToken);                            
+
+                            Variable v = new Variable(wordToken, null, null);
+                            int index = specialTokensClass.FindLastIndex(x => x is Function);
+                            ((Function)specialTokensClass.ElementAt(index)).Parametro.Add(v);  
+                        }else if (elements.ElementAt(elements.Count-1) == "," && elements.Count >= 7 && elements[0] == "let")
+                        {
+                            specialTokens.Add(wordToken);
+                            elements.Add(wordToken);                            
+
+                            Variable v = new Variable(wordToken, null, null);
+                            
+                            if(!specialTokensClass.Exists(x => x.Nombre == v.Nombre))
+                                specialTokensClass.Add(v);   
+                            else
+                                return false;          
                         }
                         else
                             return false;
@@ -839,7 +909,7 @@ public class Lexicon
                         if (isfunction)
                         {
                             int index = specialTokensClass.FindLastIndex(x => x is Function);
-                            if (/*index == specialTokens.Count - 2*/ index != -1)
+                            if (index != -1)
                             {
                                 ((Function)specialTokensClass.ElementAt(index)).Parametro.Add(new Variable(wordToken, null, null));
                             }
@@ -874,8 +944,17 @@ public class Lexicon
                     elements.Add(wordToken);
                 }else if (wordToken == "true" || wordToken == "false")
                 {
+                    if (elements.ElementAt(elements.Count-1) == "=")
+                    {
+                        Variable tempvar = new Variable(elements.ElementAt(elements.Count-2),"bool",wordToken);
+                        specialTokensClass.Add(tempvar);
+                        variables.Add(tempvar);
+                    }else
+                    {
+                        BoolToken temp = new BoolToken("",wordToken);
+                    }
                     elements.Add(wordToken);
-                    BoolToken temp = new BoolToken("",wordToken);
+
                 }else if (wordToken == "PI")
                 {
                     elements.Add(wordToken);
@@ -891,5 +970,129 @@ public class Lexicon
         }
 
         return true;
+    }
+    /// <summary>
+    /// Método para obtener sublínea de código
+    /// </summary>
+    /// <param name="line"></Línea de código ingresada por el usuario>
+    /// <param name="index"></Indice que indica el comienzo de la sublínea>
+    /// <returns></Retorna la sublínea>
+    private string Makesubline(string line,int index,List<string> elements)
+    {
+        string result = "";
+        string tempstr = "";
+        bool dism = false;
+        string tempstr2 = "";
+        int posintemp = 0;
+        int tempos = 0;
+        int letcount = 0;
+        for (int i = 0; i < elements.Count-2; i++)
+        {
+            if(elements[i] == "let")
+                letcount++;
+        }
+        for (int i = index; i >= 0; i--)
+        {
+            if(line[i] == '=')
+            {
+                tempos = i+2;
+                tempstr = line[i].ToString();
+                tempstr+=line[tempos];
+                tempstr2 = line[tempos-2].ToString();
+                tempstr2+=line[tempos-1].ToString();
+                tempstr2+=line[tempos].ToString();
+                break;
+            }
+        }
+        string tempstring = "";
+        string tempstring2 = "";
+        for (int i = tempos; i < line.Length; i++)
+        {   
+            if (letcount == 0)
+            {
+                int temposinline = ClosePos(line,posintemp);
+                lastposition = temposinline;
+                for (int j = posintemp+1; j < temposinline; j++)
+                {
+                    result+=line[j];
+                }
+                break;
+            }else if(line[i] == ',')
+            {
+                lastposition = i;
+                break;
+            }
+            if (tempstring != "")
+            {
+                tempstr = tempstring;
+                tempstr2 = tempstring2;
+            }
+            tempstr+=line[i];
+            //tempstring = tempstr.Replace(tempstr[0].ToString(),string.Empty);
+            List<char> templist = tempstr.Reverse().ToList();
+            templist.Reverse();
+            templist.RemoveAt(0);
+            tempstr = "";
+            for (int j = 0; j < templist.Count; j++)
+            {
+                tempstr+=templist[j];
+            }
+            tempstr2+=line[i];
+            List<char> templist2 = tempstr2.Reverse().ToList();
+            templist2.Reverse();
+            templist2.RemoveAt(0);
+            tempstr2 = "";
+            for (int j = 0; j < templist2.Count; j++)
+            {
+                tempstr2+=templist2[j];
+            }
+            //tempstring2 = tempstr2.Replace(tempstr2[0].ToString(),string.Empty);
+            if (tempstr == "in")
+            {
+                letcount--;
+                if (letcount == 0)
+                {
+                    posintemp = i;
+                }
+            }else if (tempstr2 == "let" && i >= tempos+5)
+            {
+                letcount++;
+            }
+            result+=line[i];
+        }
+
+
+        return result;
+    }
+        /// <summary>
+    /// Método que retorna la posición de cierre de la instrucción dada
+    /// </summary>
+    /// <param name="lines"></Línea de código ingresada por el usuario.>
+    /// <param name="lex"></Resultado del análisis léxico>
+    /// <param name="token"></Parámetro a buscar>
+    /// <returns></Retorna la posición de cierre de la instrucción dada>
+    public static int ClosePos(string lines, int posIn)
+    {
+        int result = 0;
+        int countOpen = 0, countClose = 0;
+
+        for (int i = posIn + 1; i < lines.Length; i++)
+        {
+            if(lines.ElementAt(i) == '(')
+                countOpen++;
+            else if(lines.ElementAt(i) == ')')
+                countClose++;
+
+            if (countClose > countOpen && (countClose != 0 || countOpen != 0))
+            {
+                result = i-1;
+                break;
+            }else if(lines[i] == 'i' && lines[i+1] == 'n')
+            {
+                result = i - 1;
+                break;
+            }
+        }
+        return result;
     }
 }
