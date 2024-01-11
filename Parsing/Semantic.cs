@@ -24,7 +24,8 @@ public class Semantic
                 {
                     bad = true;
                 }else if (!double.TryParse(currentTokens.ElementAt(i+1),out _) && !variables.Any(x =>x is Variable && ((Variable)x).Nombre == currentTokens.ElementAt(i+1) && (((Variable)x).Tipo == "int" || ((Variable)x).Tipo == null)) && !lex.MathTokens().Contains(currentTokens.ElementAt(i+1))
-                && currentTokens.ElementAt(i+1) != ")" && currentTokens.ElementAt(i+1) != "(" && !functions.Any(x => x is Function && x.Nombre == currentTokens.ElementAt(i+1)) && !functions.Any(x => x is Function && ((Function)x).Parametro.Any(x => x.Nombre == currentTokens.ElementAt(i+1))))
+                && currentTokens.ElementAt(i+1) != ")" && currentTokens.ElementAt(i+1) != "(" && !functions.Any(x => x is Function && x.Nombre == currentTokens.ElementAt(i+1)) && !functions.Any(x => x is Function && ((Function)x).Parametro.Any(x => x.Nombre == currentTokens.ElementAt(i+1)))
+                && !lex.Tokens().Contains(currentTokens.ElementAt(i+1)))
                 {
                     bad = true;
                 }
@@ -53,10 +54,10 @@ public class Semantic
                 List<string> templist = lines.GetRange(i+1,pos-(i+1));
                 for (int j = 0; j < templist.Count; j++)
                 {
-                    if ((!double.TryParse(templist.ElementAt(j),out _) && !lex.MathTokens().Contains(templist[j])
-                    && !lex.Operators().Contains(templist[j]) && !lex.Symbols().Contains(templist[j]))
+                    if (((!double.TryParse(templist.ElementAt(j),out _) && !lex.MathTokens().Contains(templist[j])
+                    && !lex.Operators().Contains(templist[j]) && !lex.Symbols().Contains(templist[j])) && !lex.Tokens().Contains(templist[j])
                     && !variables.Any(x => x is Variable && ((Variable)x).Nombre == templist[j] && ((Variable)x).Tipo == "int")
-                    && !functions.Any(x => x is Function && ((Function)x).Parametro.Any(x => x.Nombre == templist[j])))
+                    && !functions.Any(x => x is Function && ((Function)x).Parametro.Any(x => x.Nombre == templist[j]))) || templist[j] == "function")
                     {
                         bad = true;
                     }
@@ -65,8 +66,28 @@ public class Semantic
             {
                 bool isbool = false;
                 bool isint = false;
-
-                if (double.TryParse(currentTokens.ElementAt(i-1),out _) || variables.Any(x => x is Variable && ((Variable)x).Nombre == currentTokens.ElementAt(i-1) && ((Variable)x).Tipo == "int"))
+                bool isexpression = false;
+                List<string> expression = new List<string>();
+                if (expression.Any(x => lex.Tokens().Contains(x) && x != "function")) //Expresiones en condiciones del if
+                {
+                    isexpression = true;
+                    string result = "";
+                    List<string> temp = new List<string>();
+                    temp = expression.GetRange(0,expression.FindIndex(x => x == token)-1);
+                    temp.Add(";");
+                    result = PredFunction.Executeline(temp,lex).ElementAt(0);
+                    if (double.TryParse(result,out _) || variables.Any(x => x is Variable && ((Variable)x).Nombre == result && ((Variable)x).Tipo == "int"))
+                    {
+                        isint = true;
+                    }else if (stringTokens.Any(x => x is StringToken && ((StringToken)x).Valor == token)) //revisar strings
+                    {
+                        isint = false;
+                        isbool = false;
+                    }else if (lex.BoolValues().Contains(result) || variables.Any(x =>x is Variable &&((Variable)x).Nombre == result && (((Variable)x).Tipo == "bool")))
+                    {
+                        isbool = true;
+                    }
+                }else if (double.TryParse(currentTokens.ElementAt(i-1),out _) || variables.Any(x => x is Variable && ((Variable)x).Nombre == currentTokens.ElementAt(i-1) && ((Variable)x).Tipo == "int"))
                 {
                     isint = true;
                 }else if (stringTokens.Any(x => x is StringToken && ((StringToken)x).Valor == token))
@@ -78,15 +99,32 @@ public class Semantic
                     isbool = true;
                 }
 
-                if (isint)
+                if (isexpression)
                 {
-                    if (!double.TryParse(currentTokens.ElementAt(i+1),out _) && !variables.Any(x => ((Variable)x).Nombre == currentTokens.ElementAt(i+1) && ((Variable)x).Tipo == "int"))
+                    string result = "";
+                    List<string> temp = new List<string>();
+                    temp = expression.GetRange(expression.FindIndex(x => x == token)+1,expression.Count - (expression.FindIndex(x => x == token)+1));
+                    temp.Add(";");
+                    result = PredFunction.Executeline(temp,lex).ElementAt(0);
+                    if ((double.TryParse(result,out _) || variables.Any(x => x is Variable && ((Variable)x).Nombre == result && ((Variable)x).Tipo == "int")) && !isint)
+                    {
+                        bad = true;
+                    }else if (stringTokens.Any(x => x is StringToken && ((StringToken)x).Valor == token) && (isint || isbool)) //revisar strings
+                    {
+                        bad = true;
+                    }else if (lex.BoolValues().Contains(result) || variables.Any(x =>x is Variable &&((Variable)x).Nombre == result && (((Variable)x).Tipo == "bool")) && !isint)
+                    {
+                        bad = true;
+                    }
+                }else if (isint)
+                {
+                    if (currentTokens.ElementAt(i+1) == "function" || (!double.TryParse(currentTokens.ElementAt(i+1),out _) && !variables.Any(x => ((Variable)x).Nombre == currentTokens.ElementAt(i+1) && ((Variable)x).Tipo == "int") && !lex.Tokens().Contains(currentTokens.ElementAt(i+1))))
                     {
                         bad = true;
                     }
                 }else if (isbool)
                 {
-                    if (!lex.BoolValues().Contains(currentTokens.ElementAt(i+1)) && !variables.Any(x => ((Variable)x).Nombre == currentTokens.ElementAt(i+1) && (((Variable)x).Tipo == "bool")))
+                    if (currentTokens.ElementAt(i+1) == "function"|| (!lex.BoolValues().Contains(currentTokens.ElementAt(i+1)) && !variables.Any(x => ((Variable)x).Nombre == currentTokens.ElementAt(i+1) && (((Variable)x).Tipo == "bool")) && !lex.Tokens().Contains(currentTokens.ElementAt(i+1))))
                     {
                         bad = true;
                     }
@@ -94,7 +132,7 @@ public class Semantic
                 {
                     if(functions.Any(x => x is Function && ((Function)x).Parametro.Any(x => x.Nombre == currentTokens.ElementAt(i+1))))
                         if ((double.TryParse(currentTokens.ElementAt(i+1),out _) || lex.BoolValues().Contains(currentTokens.ElementAt(i+1)) 
-                        || variables.Any(x =>x is Variable && ((Variable)x).Nombre == currentTokens.ElementAt(i+1) && (((Variable)x).Tipo == "int" || (((Variable)x).Tipo == "bool")))))
+                        || currentTokens.ElementAt(i+1) == "function" ||variables.Any(x =>x is Variable && ((Variable)x).Nombre == currentTokens.ElementAt(i+1) && (((Variable)x).Tipo == "int" || (((Variable)x).Tipo == "bool")))))
                         {
                             bad = true;
                         }
