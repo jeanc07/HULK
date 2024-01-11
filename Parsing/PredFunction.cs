@@ -4,6 +4,7 @@ using System.Net;
 using System.Reflection.Metadata.Ecma335;
 using System.Runtime.Serialization;
 using System.Security.AccessControl;
+using System.Security.Principal;
 using System.Xml.XPath;
 /// <summary>
 /// Clase que implementa todas las funcionalidades del lenguaje HULK.
@@ -11,6 +12,22 @@ using System.Xml.XPath;
 public class PredFunction
 {   
     private static bool mathexception;
+    private static bool haveprint;
+    public static bool HavePrint()
+    {
+        return haveprint;
+    }
+    /// <summary>
+    /// Método para modificar la variable global haveprint
+    /// </summary>
+    /// <param name="line"></Lista de string que representa a la línea>
+    private static void ChangePrint(List<string> line)
+    {
+        if(line.Contains("print"))
+            haveprint = true;
+        else    
+            haveprint = false;
+    }
     //private static bool makeclear = true;
     /// <summary>
     /// Método con el cual se resuelven las operaciones matemáticas implementadas por el usuario.
@@ -27,6 +44,12 @@ public class PredFunction
         bool exist = false;
         int pos = 0;
         List<SpecialTokensClass> tokenlist = lex.SpecialTokensClass();
+
+        if(tokens.ElementAt(0) == "(" && tokens.ElementAt(tokens.Count-1) == ")")
+        {
+            tokens.RemoveAt(0);
+            tokens.RemoveAt(tokens.Count-1);
+        }
         if (tokens.Count == 1)
         {
             if(lex.Variables().Any(x => x.Nombre == tokens[0]))
@@ -36,11 +59,6 @@ public class PredFunction
                 return a;
             }else
                 return Convert.ToDouble(tokens[0]);
-        }
-        if(tokens.ElementAt(0) == "(" && tokens.ElementAt(tokens.Count-1) == ")")
-        {
-            tokens.RemoveAt(0);
-            tokens.RemoveAt(tokens.Count-1);
         }
 
         int cont1 = 0;
@@ -68,49 +86,59 @@ public class PredFunction
         }    
 
         if(tempTokens.Count > 0)                         
-        {                                                       
+        {                                                   
+            int tempsin = tokens.FindIndex(x => x == "sin"), tempcos = tokens.FindIndex(x => x == "cos"), templog = tokens.FindIndex(x => x == "log");   
             if(tokens.ElementAt(0) != "log")
                 result += doArithmetic(tempTokens, lex);
 
-            if(tokens.ElementAt(0) == "cos")
-            {           
-                tokens.RemoveAt(0);         
-                tokens.Insert(0, Math.Cos(result).ToString());
-            }
-            else if(tokens.ElementAt(0) == "sin")
-            {           
-                tokens.RemoveAt(0);         
-                tokens.Insert(0, Math.Sin(result).ToString());
-            }
-            else if(tokens.ElementAt(0) == "log")
-            {           
-                tokens.RemoveAt(0);                                          
-                int splitter = tempTokens.IndexOf(",");  
-                double result1 = 0, result2 = 0;
-
-                string part1 = createString(tempTokens.GetRange(1, splitter-1));                            
-                if(!double.TryParse(part1, out _))
-                    result1 = doArithmetic(tempTokens.GetRange(1, splitter-1), lex);     
-                else
-                    result1 = double.Parse(part1);
-
-
-                string part2 = createString(tempTokens.GetRange(splitter+1, ((tempTokens.Count-1)-(splitter+1))));                            
-                if(!double.TryParse(part2, out _))
-                    result2 = doArithmetic(tempTokens.GetRange(splitter+1, ((tempTokens.Count-1)-(splitter+1))), lex);     
-                else
-                    result2 = double.Parse(part2);
-
-                if(result1 != 0)
-                {
-                    if(Math.Log(result1) != 0)
-                        tokens.Insert(0, (Math.Log(result2)/Math.Log(result1)).ToString());
-                    else
-                        tokens.Insert(0, "0");
+            if (tempcos != -1)
+            {
+                if(tokens.ElementAt(tempcos) == "cos")
+                {           
+                    ReplaceValue(tempTokens,lex);
+                    tokens.RemoveAt(tempcos);         
+                    tokens.Insert(tempcos, Math.Cos(result).ToString());
                 }
-                else
-                    tokens.Insert(0, "0");
-            }                                 
+            }else if(tempsin != -1)
+            {
+                if(tokens.ElementAt(tempsin) == "sin")
+                {           
+                    ReplaceValue(tempTokens,lex);
+                    tokens.RemoveAt(tempsin);         
+                    tokens.Insert(tempsin, Math.Sin(result).ToString());
+                }
+            }else if (templog != -1)
+            {
+                if(tokens.ElementAt(templog) == "log")
+                {           
+                    tokens.RemoveAt(templog);                                          
+                    int splitter = tempTokens.IndexOf(",");  
+                    double result1 = 0, result2 = 0;
+
+                    string part1 = createString(tempTokens.GetRange(1, splitter-1));                            
+                    if(!double.TryParse(part1, out _))
+                        result1 = doArithmetic(tempTokens.GetRange(1, splitter-1), lex);     
+                    else
+                        result1 = double.Parse(part1);
+
+
+                    string part2 = createString(tempTokens.GetRange(splitter+1, ((tempTokens.Count-1)-(splitter+1))));                            
+                    if(!double.TryParse(part2, out _))
+                        result2 = doArithmetic(tempTokens.GetRange(splitter+1, ((tempTokens.Count-1)-(splitter+1))), lex);     
+                    else
+                        result2 = double.Parse(part2);
+
+                    if(result1 != 0)
+                    {
+                        if(Math.Log(result1) != 0)
+                            tokens.Insert(templog, (Math.Log(result2)/Math.Log(result1)).ToString());
+                        else
+                            tokens.Insert(templog, "0");
+                    }
+                    else
+                        tokens.Insert(templog, "0");
+                }                                 
+            }
             else
                 tokens.Insert(pos, result.ToString());
             tempTokens.Clear();
@@ -565,37 +593,45 @@ public class PredFunction
     /// </summary>
     /// <param name="tokens"></Código que está dentro del contexto del print>
     /// <param name="lex"></Resultado del análisis léxico>
-    public static void print2(List<string> tokens, Lexicon lex)
+    public static List<string> print2(List<string> tokens, Lexicon lex)
     {
-        tokens.Remove(tokens[0]);
-        tokens.Remove(tokens[0]);
-        if(tokens[tokens.Count-1] == ";")
-            tokens.RemoveAt(tokens.Count-2);
-        else
-            tokens.RemoveAt(tokens.Count-1);
+        List<string> result = new List<string>();
+        int printindex = tokens.FindIndex(x => x == "print");
+        int openparentexisindex = tokens.FindIndex(printindex, x => x == "(");
+        int closedparentexisindex = ClosePos(tokens,printindex);
+        tokens.RemoveAt(printindex);
+        tokens.RemoveAt(openparentexisindex-1);
+        tokens.RemoveAt(closedparentexisindex-2);
         ReplaceValue(tokens,lex);
         if (next(tokens,lex) == "")
         {
-            print(tokens,lex);
+            tokens.Remove(";");
+            result = print(tokens,lex);
         }else
         {
-            Executeline(tokens,lex);
+            if(tokens[tokens.Count-1] != ";")
+                tokens.Add(";");
+            result = Executeline(tokens,lex);
         }
+        return result;
     }
     /// <summary>
     /// Método que implementa la funcionalidad del print del lenguaje HULK.
     /// </summary>
     /// <param name="tokens"></Línea de código que ingresó el usuario ya fraccionada>
     /// <param name="lex"></Resultado del análisis léxico>
-    public static void print(List<string> tokens, Lexicon lex)
+    public static List<string> print(List<string> tokens, Lexicon lex)
     {
+        List<string> result = new List<string>();
         if (tokens.Count == 1)
         {
-            System.Console.WriteLine(tokens[0]);   
+            System.Console.WriteLine(tokens[0]);
+            result.Add(tokens[0]);   
         }
         else if (tokens.Any(x => x == "@"))
         {
             System.Console.WriteLine(Concat(tokens,lex));
+            result.Add(Concat(tokens,lex));
         }else
         {
             List<string> inside = tokens.GetRange(2, tokens.Count-3); 
@@ -622,6 +658,7 @@ public class PredFunction
                 }                   
             }         
         }
+        return result;
     }
 
     /// <summary>
@@ -656,7 +693,7 @@ public class PredFunction
             {
                 result = "function";
                 break;
-            }else if (lines.Count == 1 || lines.Contains("@"))
+            }else if (lines.Count == 1)
             {
                 result = "";
                 continue;
@@ -664,6 +701,10 @@ public class PredFunction
             && lines.Count > 1)
             {
                 result= "math";
+                continue;
+            }else if (lines.Contains("@"))
+            {
+                result = "concat";
                 continue;
             }
         }
@@ -839,40 +880,130 @@ public class PredFunction
         bool result = false;
         bool isnumber = false;
         bool isstring = false;
+        bool isexpression = false;
         List<SpecialTokensClass> special = lex.SpecialTokensClass();
         string? operatorcondition = tempif.Find(x => lex.ConditionOperators().Contains(x));
         for (int i = 0; i < tempif.Count; i++)
         {
             for (int j = 0; j < special.Count; j++)
             {
-                if (tempif[i] == special[j].Nombre && special[j] is Variable)
+                if (tempif.Any(x => x == "let" || x == "if" || lex.Functions().Any(y => y.Nombre == x) || x == "print"))//expresiones
+                {
+                    isexpression = true;
+                }else if (tempif[i] == special[j].Nombre && special[j] is Variable)
                 {
                     tempif[i] = ((Variable)special[j]).Valor.ToString();
                     if (double.TryParse(tempif[i], out _))
                     {
                         isnumber = true; 
-                        //break;  
                     }else if(tempif[i] != "true" || tempif[i] != "false")
                     {
                         isstring = true;
-                        //break;
                     }
                 }else
                 {
                     if (double.TryParse(tempif[i], out _))
                     {
                         isnumber = true; 
-                        //break;  
                     }else if(tempif[i] != "true" || tempif[i] != "false")
                     {
                         isstring = true;
-                        //break;
                     }
                 }
             }
         }
-        
-        if (isnumber || isstring)
+        if (isexpression)
+        {
+            List<int> numbers = checkif(tempif,"%");
+            List<int> equals = checkif(tempif,operatorcondition);
+            List<int> concat = checkif(tempif,"@");
+            string result1 = "", result2 = "";
+            //faltan los booleanos
+            //if (concat.Count == 0)
+            //{
+                for (int i = 0; i < equals.Count; i++)
+                {                       
+                    List<string> temp1 = tempif.GetRange(0,equals.ElementAt(i));
+                    temp1.Add(";");
+                    result1 = Executeline(temp1,lex).ElementAt(0);
+
+                    List<string> temp2 = new List<string>();
+                    temp2 = tempif.GetRange(equals.ElementAt(i)+1,tempif.Count-(equals.ElementAt(i)+1));
+                    temp2.Add(";");
+                    result2 = Executeline(temp2,lex).ElementAt(0);
+                }
+            /*}else
+            {
+                for (int i = 0; i < equals.Count; i++)
+                {                       
+                    List<string> temp1 = tempif.GetRange(0,equals.ElementAt(i));
+                    if (temp1.Any(x => x == "@"))
+                    {
+                        
+                    }else
+                    {
+                        temp1.Add(";");
+                        result1 = Executeline(temp1,lex).ElementAt(0); 
+                    }
+
+                    List<string> temp2 = new List<string>();
+                    temp2 = tempif.GetRange(equals.ElementAt(i)+1,tempif.Count-(equals.ElementAt(i)+1));
+                    temp2.Add(";");
+                    result2 = Executeline(temp2,lex).ElementAt(0);
+                }
+            }*/
+
+
+            if (operatorcondition == "==")
+            {
+                if (result1 == result2)
+                    result = true;
+                else
+                    result = false;
+            }else if (operatorcondition == "!=")
+            {
+                if(result1 != result2)
+                    result = true;
+                else 
+                    result = false;
+            }else if (operatorcondition == ">=")
+            {
+                if (isnumber)
+                {
+                    if(double.Parse(result1) >= double.Parse(result2))
+                        result = true;
+                    else
+                        result = false;
+                }
+            }else if (operatorcondition == "<=")
+            {
+                if (isnumber)
+                {
+                    if(double.Parse(result1) <= double.Parse(result2))
+                        result = true;
+                    else
+                        result = false;
+                }
+            }else if (operatorcondition == ">")
+            {
+                if (isnumber)
+                {
+                    if(double.Parse(result1) > double.Parse(result2))
+                        result = true;
+                    else
+                        result = false;
+                }
+            }else if (operatorcondition == "<")
+            {
+                if (isnumber)
+                {
+                    if(double.Parse(result1) < double.Parse(result2))
+                        result = true;
+                    else
+                        result = false;
+                }
+            }
+        }else if (isnumber || isstring)
         {
             List<int> numbers = checkif(tempif,"%");
             List<int> equals = checkif(tempif,operatorcondition);
@@ -1156,10 +1287,9 @@ public class PredFunction
     /// <returns></Retorna el resultado de haber ejecutado dicha funcion>
     public static List<string> ExecuteFunction(List<string> lines,string function,List<string> Parametro, Lexicon lex)
     {
-        //REVISAR PROBLEMA CON EL PARAMETRO DE LA FUNCION
         List<string> result = new List<string>();
         List<SpecialTokensClass> specials = lex.SpecialTokensClass();
-        Parametro.RemoveAll(x => x == ",");
+        //Parametro.RemoveAll(x => x == ",");
         List<string> paramscopy = new List<string>();
         paramscopy.AddRange(Parametro);
         if (specials.Any(x => x is Function && x.Nombre == function && ((Function)x).Cuerpo.Contains(function)))
@@ -1176,9 +1306,8 @@ public class PredFunction
                 {
                     if (tempcorp[i] == tempparams[j].Nombre)
                     {
-                        List<string> parametrotemp = Giveme(paramscopy,j);
+                        List<string> parametrotemp = Giveme2(paramscopy,j,lex);
                         parametrotemp.Add(";");
-                        //makeclear = false;
                         string doneparam = Executeline(parametrotemp,lex).ElementAt(0);
                     
                         tempcorp[i] = doneparam;
@@ -1237,7 +1366,6 @@ public class PredFunction
                 }
             }else
             {
-                //makeclear = true;
                 return tempif;
             }
 
@@ -1255,7 +1383,9 @@ public class PredFunction
                 {
                     if (tempcorp[i] == tempparams[j].Nombre)
                     {
-                        List<string> parametrotemp = Giveme(paramscopy,j);
+                        List<string> parametrotemp = Giveme2(paramscopy,j,lex);
+                        parametrotemp.Add(";");
+                        parametrotemp = Executeline(parametrotemp,lex);
                         tempcorp.InsertRange(i,parametrotemp);
                         tempcorp.RemoveAt(i+parametrotemp.Count);
                     }
@@ -1270,7 +1400,7 @@ public class PredFunction
     /// </summary>
     /// <param name="parametro"></Lista con los parámetros de la función>
     /// <returns></Retorna una lista con los parámetros de la función ordenados>
-    private static List<string> Giveme(List<string> parametro, int parampos)
+    private static List<string> Giveme(List<string> parametro, int parampos, Lexicon lex)
     {
         List<string> result = new List<string>();
         bool check = false;
@@ -1279,36 +1409,93 @@ public class PredFunction
             return parametro;
         for (int i = 0; i < parametro.Count-1; i++)
         {
-            if (double.TryParse(parametro[i],out _))
+            if (double.TryParse(parametro[i],out _) || lex.Variables().Any(x => x.Nombre == parametro[i+1]))
                 check = true;
             else
                 check = false;
-            if (check && double.TryParse(parametro[i+1],out _))
+            if (check && (double.TryParse(parametro[i+1],out _) || lex.Variables().Any(x => x.Nombre == parametro[i+1])))
             {
                 count++;
                 if (count == parampos)
                 {
                     pos = i+1;
+                    break;
+                }
+            }else if (lex.Tokens().Contains(parametro[i+1]))
+            {
+                count++;
+                if (count == parampos)
+                {
+                    pos = i+1;
+                    break;
                 }
             }
         }
 
         for (int i = pos; i < parametro.Count-1; i++)
         {
-            if (double.TryParse(parametro[i],out _))
+            if (double.TryParse(parametro[i],out _) || lex.Variables().Any(x => x.Nombre == parametro[i+1]))
                 check = true;
             else
                 check = false;
-            if (check && double.TryParse(parametro[i+1],out _))
+            if (check && (double.TryParse(parametro[i+1],out _) || lex.Variables().Any(x => x.Nombre == parametro[i+1])))
             {
                 result.Add(parametro[i]);
                 break;
+            }else if (lex.Tokens().Contains(parametro[i+1]))
+            {
+                result.Add(parametro[i]);
+                break;
+            }else if (lex.Tokens().Contains(parametro[i]))
+            {
+                result.Add(parametro[i]);
+            }else if (i != 0)
+            {
+                if (lex.Variables().Any(x => x.Nombre == parametro[i-1] && parametro[i-2] != "let" && parametro[i-2] != ","))
+                    break;
             }else
             {
                 result.Add(parametro[i]);
             }
             if (i == parametro.Count -2)
                 result.Add(parametro[i+1]);
+        }
+
+        if (pos >= parametro.Count - 1)
+        {
+            result.Add(parametro[pos]);
+        }
+        return result;
+    }
+
+    private static List<string> Giveme2(List<string> parametro, int parampos, Lexicon lex)
+    {
+        List<string> result = new List<string>();
+        string temp = "";
+        if (parametro.Count == 1)
+            return parametro;
+        for (int i = 0; i < parametro.Count; i++)
+        {
+            temp+=" " + parametro[i];
+        }
+        if (temp != "")
+        {
+            List<string> parametrotemp = temp.Split(new char[] {','}).ToList();
+            for (int i = 0; i < parametrotemp.Count; i++)
+            {
+                List<string> paramstemps = parametrotemp[i].Split(new char[] {' '}).ToList();
+                paramstemps.RemoveAll(x => x == "" || x == " ");
+                if (i == parampos)
+                {
+                    result.AddRange(paramstemps);
+                    break;
+                }
+            }
+            /*if (parametro.Count >= parampos)
+            {
+                parametrotemp[parampos].Trim();
+                result.Add(parametrotemp[parampos]);
+            }*/
         }
         return result;
     }
@@ -1420,6 +1607,7 @@ public class PredFunction
     {
         List<string> result = new List<string>();
         List<SpecialTokensClass> tokens = lex.SpecialTokensClass();
+        ChangePrint(lines);
         if(lines[0] == "function")
             return result;
         if (next(lines,lex) == "")
@@ -1427,7 +1615,6 @@ public class PredFunction
             result = lines;
         }else
         {
-            //chequear los removerange
             if (next(lines,lex) == "let")
             {
                 int tem = lines.FindIndex(0,x => x == "let");
@@ -1452,8 +1639,7 @@ public class PredFunction
                 result = Executeline(lines,lex);
             }else if (next(lines,lex) == "print")
             {
-                print2(lines, lex);
-                print(lines,lex);
+                result = print2(lines, lex);
             }else if(next(lines,lex) == "function")
             {
                 string functiontemp = nextFunc(lines,lex);
@@ -1467,6 +1653,15 @@ public class PredFunction
                 closetem = ClosePos(lines,tem);
                 lines.RemoveRange(tem,closetem - tem+1);
                 result = Executeline(lines,lex);
+            }else if (next(lines,lex) == "concat")
+            {
+                List<string> temp = new List<string>();
+                temp.AddRange(lines);
+                temp.Remove(";");
+                string resulttemp = Concat(temp,lex);
+                lines.Insert(0,resulttemp);
+                lines.RemoveRange(1,lines.Count-1);
+                result = Executeline(lines,lex);
             }else
             {
                 List<string> temp = new List<string>();
@@ -1479,8 +1674,6 @@ public class PredFunction
             }
         }
         ReplaceValue(lines,lex);
-        //if(makeclear)
-            //Clearvar(lex);
         return result;
     }
 
@@ -1525,26 +1718,4 @@ public class PredFunction
         }
         return result;
     }
-    /// <summary>
-    /// Método que me elimina las variables usadas en la línea que acabo de ejecutar para ejecutar la próxima línea
-    /// </summary>
-    /// <param name="lex"></Resultado del análisis léxico>
-    /*private static void Clearvar(Lexicon lex)
-    {
-        List<SpecialTokensClass> specials = lex.SpecialTokensClass();
-        List<string> specialtok = lex.SpecialTokens();
-        List<Variable> variables = lex.Variables();
-        List<StringToken> stringTokens = lex.StringTokens();
-        for (int i = 0; i < specials.Count; i++)
-        {
-            if(specials[i] is Variable)
-            {
-                if(specials[i].Nombre != null && specials[i].Nombre != "PI")
-                    specialtok.Remove(specials[i].Nombre);
-                specials.RemoveAll(x => x.Nombre != "PI");
-            }
-        }
-        variables.RemoveAll(x => x.Nombre != "PI");
-        stringTokens.RemoveAll(x => x.Nombre != "PI");
-    }*/
 }
