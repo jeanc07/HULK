@@ -27,14 +27,14 @@ for (int i = 0; i < lines.Count; i++)
     { 
         SyntacticAnalisis sa = new SyntacticAnalisis();
         bool syntaxisAnalysis = sa.syntaxisAnalysis(listToken,lex);
-        System.Console.WriteLine(syntaxisAnalysis);
+        //System.Console.WriteLine(syntaxisAnalysis);
         Semantic sea = new Semantic();
         bool semanticAnalysis = sea.SemanticAnalysis(listToken,lex);
-        System.Console.WriteLine(semanticAnalysis);
+        //System.Console.WriteLine(semanticAnalysis);
         if (!syntaxisAnalysis && !semanticAnalysis)
         {
             List<string> execute = PredFunction.Executeline(listToken,lex);
-            if (execute.Count == 1)
+            if (execute.Count == 1 && !PredFunction.HavePrint())
             {
                 System.Console.WriteLine(execute[0]);
             }
